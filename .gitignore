@@ -1,0 +1,15 @@
+/.vs/*
+/.vscode/*
+!/.vscode/c_cpp_properties.json
+/SDL3-*/
+/build/
+/dist/
+/out/
+/*.log
+/*.ini
+/*.dll
+/*.exe
+/*.lib
+/*.so
+/CMakePresets.json
+/CMakeUserPresets.json
