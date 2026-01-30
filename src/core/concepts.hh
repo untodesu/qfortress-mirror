@@ -19,4 +19,10 @@ concept char_type = std::same_as<T, char> || std::same_as<T, wchar_t> || std::sa
     || std::same_as<T, char32_t>;
 } // namespace qf
 
+namespace qf
+{
+template<typename T>
+concept derived_exception = std::derived_from<T, std::runtime_error> || std::derived_from<T, std::logic_error>;
+} // namespace qf
+
 #endif

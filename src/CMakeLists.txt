@@ -6,3 +6,5 @@ add_subdirectory(client_compat)
 add_subdirectory(client_modern)
 add_subdirectory(server)
 add_subdirectory(shared)
+
+add_subdirectory(main)

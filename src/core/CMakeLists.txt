@@ -18,6 +18,10 @@ add_library(core STATIC
     "${CMAKE_CURRENT_LIST_DIR}/utils/string.hh"
     "${CMAKE_CURRENT_LIST_DIR}/buffer.cc"
     "${CMAKE_CURRENT_LIST_DIR}/buffer.hh"
+    "${CMAKE_CURRENT_LIST_DIR}/cmdline.cc"
+    "${CMAKE_CURRENT_LIST_DIR}/cmdline.hh"
+    "${CMAKE_CURRENT_LIST_DIR}/concepts.hh"
+    "${CMAKE_CURRENT_LIST_DIR}/exceptions.hh"
     "${CMAKE_CURRENT_LIST_DIR}/pch.hh"
     "${CMAKE_CURRENT_LIST_DIR}/version.hh")
 target_compile_features(core PUBLIC cxx_std_20)
