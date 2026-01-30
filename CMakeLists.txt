@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.15 FATAL_ERROR)
 project(QFortress LANGUAGES C CXX VERSION 0.0.1)
 
+find_package(Python3 COMPONENTS Interpreter REQUIRED)
+
 option(BUILD_CLIENT "Build client" ON)
 option(BUILD_SERVER "Build server" ON)
 

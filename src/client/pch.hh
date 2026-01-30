@@ -2,7 +2,7 @@
 #define CLIENT_PCH_HH
 #pragma once
 
-#include <core/pch.hh>
+#include <shared/pch.hh>
 
 #include <SDL3/SDL.h>
 

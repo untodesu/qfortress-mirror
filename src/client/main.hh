@@ -5,6 +5,7 @@
 namespace client
 {
 void main(void);
+void error(const std::exception* ex);
 } // namespace client
 
 #endif

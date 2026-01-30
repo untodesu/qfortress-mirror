@@ -1,11 +1,13 @@
 include(FetchContent)
 
 if(WIN32)
+    set(SDL_REQVER 3.4.0)
+
     if(MSVC)
-        FetchContent_Declare(download_sdl3 URL https://github.com/libsdl-org/SDL/releases/download/release-3.4.0/SDL3-devel-3.4.0-VC.zip DOWNLOAD_EXTRACT_TIMESTAMP)
+        FetchContent_Declare(download_sdl3 URL "https://github.com/libsdl-org/SDL/releases/download/release-${SDL_REQVER}/SDL3-devel-${SDL_REQVER}-VC.zip" DOWNLOAD_EXTRACT_TIMESTAMP)
         FetchContent_MakeAvailable(download_sdl3)
     elseif(MINGW)
-        FetchContent_Declare(download_sdl3 URL https://github.com/libsdl-org/SDL/releases/download/release-3.4.0/SDL3-devel-3.4.0-mingw.zip DOWNLOAD_EXTRACT_TIMESTAMP)
+        FetchContent_Declare(download_sdl3 URL "https://github.com/libsdl-org/SDL/releases/download/release-${SDL_REQVER}/SDL3-devel-${SDL_REQVER}-mingw.zip" DOWNLOAD_EXTRACT_TIMESTAMP)
         FetchContent_MakeAvailable(download_sdl3)
     else()
         message(FATAL_ERROR "SDL3 doesn't provide Windows binaries for your build environment!")
@@ -23,3 +25,12 @@ target_link_libraries(external_SDL3 INTERFACE SDL3::SDL3)
 
 ## Add an alias library so dependency list looks nicer
 add_library(external::SDL3 ALIAS external_SDL3)
+
+## Copy over the DLL
+if(WIN32 AND TARGET SDL3::SDL3)
+    get_target_property(SDL3_DLL_LOCATION SDL3::SDL3 IMPORTED_LOCATION)
+
+    if(SDL3_DLL_LOCATION AND EXISTS "${SDL3_DLL_LOCATION}")
+        execute_process(COMMAND ${CMAKE_COMMAND} -E copy_if_different "${SDL3_DLL_PATH}" "${PROJECT_BINARY_DIR}/")
+    endif()
+endif()

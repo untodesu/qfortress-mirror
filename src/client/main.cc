@@ -3,32 +3,74 @@
 #include "client/main.hh"
 
 #include "core/exceptions.hh"
+#include "core/version.hh"
+
+#include "client/globals.hh"
+#include "client/render.hh"
+#include "client/video.hh"
+
+static std::atomic_bool s_is_running;
+
+static void signal_handler(int)
+{
+    LOG_INFO("received termination signal");
+
+    s_is_running.store(false);
+}
+
+static void handle_events(void)
+{
+    thread_local SDL_Event event;
+
+    while(SDL_PollEvent(&event)) {
+        if(event.type == SDL_EVENT_QUIT) {
+            s_is_running.store(false);
+            return;
+        }
+
+        globals::dispatcher.trigger(static_cast<const SDL_Event&>(event));
+    }
+}
 
 void client::main(void)
 {
-    if(!SDL_Init(SDL_INIT_AUDIO | SDL_INIT_VIDEO | SDL_INIT_EVENTS)) {
-        throw qf::runtime_error("SDL_Init failed: {}", SDL_GetError());
+    std::signal(SIGINT, &signal_handler);
+    std::signal(SIGTERM, &signal_handler);
+
+    qf::throw_if_not<std::runtime_error>(SDL_Init(SDL_INIT_EVENTS), "SDL_Init for events subsystem failed: {}", SDL_GetError());
+
+    video::init();
+    render::init();
+
+    video::init_late();
+    render::init_late();
+
+    s_is_running.store(true);
+
+    while(s_is_running.load()) {
+        handle_events();
+
+        render::begin_frame();
+
+        render::render_world();
+
+        render::render_imgui();
+
+        render::end_frame();
     }
 
-    auto window = SDL_CreateWindow("client", 640, 480, SDL_WINDOW_RESIZABLE);
+    render::shutdown();
+    video::shutdown();
+}
 
-    if(window == nullptr) {
-        throw qf::runtime_error("SDL_CreateWindow failed: {}", SDL_GetError());
+void client::error(const std::exception* ex)
+{
+    if(ex == nullptr) {
+        SDL_LogCritical(SDL_LOG_CATEGORY_APPLICATION, "Engine Error: non-std::exception throw");
+        SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Engine Error", "Non-std::exception throw", globals::window);
     }
-
-    bool is_running = true;
-
-    while(is_running) {
-        SDL_Event event;
-
-        while(SDL_PollEvent(&event)) {
-            switch(event.type) {
-                case SDL_EVENT_QUIT:
-                    is_running = false;
-                    break;
-            }
-        }
+    else {
+        SDL_LogCritical(SDL_LOG_CATEGORY_APPLICATION, "Engine Error: %s", ex->what());
+        SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Engine Error", ex->what(), globals::window);
     }
-
-    SDL_DestroyWindow(window);
 }

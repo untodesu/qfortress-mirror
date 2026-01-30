@@ -6,4 +6,4 @@ endfunction()
 
 add_main_executable(qfortress)
 target_compile_definitions(qfortress PUBLIC QF_CLIENT)
-target_link_libraries(qfortress PUBLIC core client)
+target_link_libraries(qfortress PUBLIC core client client_modern)

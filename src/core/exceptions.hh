@@ -44,3 +44,27 @@ using invalid_argument = FormattedException<std::invalid_argument>;
 using length_error = FormattedException<std::length_error>;
 using out_of_range = FormattedException<std::out_of_range>;
 } // namespace qf
+
+namespace qf
+{
+template<qf::derived_exception T, typename... AT>
+void throw_if(bool condition, std::format_string<AT...> fmt, AT&&... args);
+template<qf::derived_exception T, typename... AT>
+void throw_if_not(bool condition, std::format_string<AT...> fmt, AT&&... args);
+} // namespace qf
+
+template<qf::derived_exception T, typename... AT>
+void qf::throw_if(bool condition, std::format_string<AT...> fmt, AT&&... args)
+{
+    if(condition) {
+        throw T(std::vformat(fmt.get(), std::make_format_args(args...)));
+    }
+}
+
+template<qf::derived_exception T, typename... AT>
+void qf::throw_if_not(bool condition, std::format_string<AT...> fmt, AT&&... args)
+{
+    if(!condition) {
+        throw T(std::vformat(fmt.get(), std::make_format_args(args...)));
+    }
+}

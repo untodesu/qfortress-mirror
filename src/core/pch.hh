@@ -5,6 +5,7 @@
 #include <cassert>
 #include <cinttypes>
 #include <cmath>
+#include <csignal>
 #include <cstdarg>
 #include <cstddef>
 #include <cstdint>

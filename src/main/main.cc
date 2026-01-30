@@ -4,11 +4,6 @@
 #include "core/exceptions.hh"
 #include "core/utils/physfs.hh"
 
-#if defined(_WIN32)
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
-#endif
-
 #if defined(QF_CLIENT)
 #include "client/main.hh"
 #elif defined(QF_SERVER)
@@ -72,10 +67,6 @@ static void wrapped_main(int argc, char** argv)
 {
     uulog::add_sink(&uulog::builtin::stderr_ansi);
 
-#if defined(_WIN32)
-    uulog::add_sink(&uulog::builtin::win32_debugout);
-#endif
-
     cmdline::create(argc, argv);
 
     if(!PHYSFS_init(argv[0])) {
@@ -122,20 +113,10 @@ static void wrapped_main(int argc, char** argv)
 
 static void handle_exception(const std::exception* ex)
 {
-    if(ex == nullptr) {
-        std::cerr << "Engine error: non-std::exception throw" << std::endl;
-    }
-    else {
-        std::cerr << "Engine error: " << ex->what() << std::endl;
-    }
-
-#if defined(_WIN32)
-    if(ex == nullptr) {
-        MessageBoxA(nullptr, "Non-std::exception throw", "Engine Error", MB_ICONERROR | MB_OK);
-    }
-    else {
-        MessageBoxA(nullptr, ex->what(), "Engine Error", MB_ICONERROR | MB_OK);
-    }
+#if defined(QF_CLIENT)
+    client::error(ex);
+#elif defined(QF_SERVER)
+    server::error(ex);
 #endif
 }
 
