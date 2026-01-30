@@ -23,14 +23,16 @@ find_package(SDL3 REQUIRED CONFIG REQUIRED COMPONENTS SDL3)
 add_library(external_SDL3 INTERFACE)
 target_link_libraries(external_SDL3 INTERFACE SDL3::SDL3)
 
-## Add an alias library so dependency list looks nicer
-add_library(external::SDL3 ALIAS external_SDL3)
-
 ## Copy over the DLL
 if(WIN32 AND TARGET SDL3::SDL3)
     get_target_property(SDL3_DLL_LOCATION SDL3::SDL3 IMPORTED_LOCATION)
 
     if(SDL3_DLL_LOCATION AND EXISTS "${SDL3_DLL_LOCATION}")
-        execute_process(COMMAND ${CMAKE_COMMAND} -E copy_if_different "${SDL3_DLL_PATH}" "${PROJECT_BINARY_DIR}/")
+        add_custom_target(external_SDL3_DLL
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different "${SDL3_DLL_LOCATION}" "${PROJECT_BINARY_DIR}")
+        add_dependencies(external_SDL3 external_SDL3_DLL)
     endif()
 endif()
+
+## Add an alias library so dependency list looks nicer
+add_library(external::SDL3 ALIAS external_SDL3)
