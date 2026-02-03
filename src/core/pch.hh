@@ -30,9 +30,16 @@
 #include <typeindex>
 #include <unordered_map>
 #include <unordered_set>
+#include <variant>
 #include <vector>
 
+#include <Eigen/Dense>
+
 #include <enet/enet.h>
+
+#include <entt/entt.hpp>
+
+#include <parson.h>
 
 #include <physfs.h>
 

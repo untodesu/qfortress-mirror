@@ -1,5 +1,7 @@
+add_subdirectory(eigen)
 add_subdirectory(enet)
 add_subdirectory(entt)
+add_subdirectory(parson)
 add_subdirectory(physfs)
 add_subdirectory(SDL3)
 add_subdirectory(stb)

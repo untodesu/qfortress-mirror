@@ -8,6 +8,16 @@ add_library(core STATIC
     "${CMAKE_CURRENT_LIST_DIR}/config/string.hh"
     "${CMAKE_CURRENT_LIST_DIR}/config/value.cc"
     "${CMAKE_CURRENT_LIST_DIR}/config/value.hh"
+    "${CMAKE_CURRENT_LIST_DIR}/entity/current_leaf.cc"
+    "${CMAKE_CURRENT_LIST_DIR}/entity/current_leaf.hh"
+    "${CMAKE_CURRENT_LIST_DIR}/entity/transform.cc"
+    "${CMAKE_CURRENT_LIST_DIR}/entity/transform.hh"
+    "${CMAKE_CURRENT_LIST_DIR}/level/bnode.cc"
+    "${CMAKE_CURRENT_LIST_DIR}/level/bnode.hh"
+    "${CMAKE_CURRENT_LIST_DIR}/level/level.cc"
+    "${CMAKE_CURRENT_LIST_DIR}/level/level.hh"
+    "${CMAKE_CURRENT_LIST_DIR}/level/loader.cc"
+    "${CMAKE_CURRENT_LIST_DIR}/level/loader.hh"
     "${CMAKE_CURRENT_LIST_DIR}/res/image.cc"
     "${CMAKE_CURRENT_LIST_DIR}/res/image.hh"
     "${CMAKE_CURRENT_LIST_DIR}/res/resource.cc"
@@ -27,8 +37,11 @@ add_library(core STATIC
 target_compile_features(core PUBLIC cxx_std_20)
 target_include_directories(core PUBLIC "${PROJECT_SOURCE_DIR}/src")
 target_link_libraries(core PUBLIC
+    external::eigen
     external::enet
+    external::entt
     external::stb
+    external::parson
     external::physfs
     external::uulog)
 target_precompile_headers(core PRIVATE "${CMAKE_CURRENT_LIST_DIR}/pch.hh")

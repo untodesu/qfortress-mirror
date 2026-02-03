@@ -4,6 +4,4 @@
 
 #include <core/pch.hh>
 
-#include <entt/entt.hpp>
-
 #endif
