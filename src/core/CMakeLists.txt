@@ -8,6 +8,8 @@ add_library(core STATIC
     "${CMAKE_CURRENT_LIST_DIR}/config/string.hh"
     "${CMAKE_CURRENT_LIST_DIR}/config/value.cc"
     "${CMAKE_CURRENT_LIST_DIR}/config/value.hh"
+    "${CMAKE_CURRENT_LIST_DIR}/entity/components.cc"
+    "${CMAKE_CURRENT_LIST_DIR}/entity/components.hh"
     "${CMAKE_CURRENT_LIST_DIR}/entity/current_leaf.cc"
     "${CMAKE_CURRENT_LIST_DIR}/entity/current_leaf.hh"
     "${CMAKE_CURRENT_LIST_DIR}/entity/transform.cc"

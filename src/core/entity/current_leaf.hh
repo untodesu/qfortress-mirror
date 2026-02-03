@@ -2,11 +2,9 @@
 #define CORE_ENTITY_CURRENT_LEAF_HH
 #pragma once
 
-class Level;
-
 class CurrentLeaf final {
 public:
-    static void fixed_update(Level& level);
+    static void fixed_update(void);
 
     explicit CurrentLeaf(int leaf_index);
 

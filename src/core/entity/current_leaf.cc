@@ -5,13 +5,12 @@
 #include "core/entity/transform.hh"
 #include "core/level/level.hh"
 
-void CurrentLeaf::fixed_update(Level& level)
+void CurrentLeaf::fixed_update(void)
 {
-    auto& registry = level.registry();
-    auto view = registry.view<Transform>();
+    auto view = level::registry.view<Transform>();
 
     for(auto [entity, transform] : view.each()) {
-        registry.emplace_or_replace<CurrentLeaf>(entity, level.find_leaf_index(transform.position()));
+        level::registry.emplace_or_replace<CurrentLeaf>(entity, level::find_leaf_index(transform.position()));
     }
 }
 
