@@ -63,12 +63,7 @@ static void enumerate_visible_internal(const BNode* node, int from_leaf, const E
     }
 }
 
-void level::init(void)
-{
-    // empty
-}
-
-void level::shutdown(void)
+void level::purge(void)
 {
     level::registry.clear();
     level::root.reset();

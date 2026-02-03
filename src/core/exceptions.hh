@@ -47,14 +47,62 @@ using out_of_range = FormattedException<std::out_of_range>;
 
 namespace qf
 {
-template<qf::derived_exception T, typename... AT>
-void throw_if(bool condition, std::format_string<AT...> fmt, AT&&... args);
-template<qf::derived_exception T, typename... AT>
-void throw_if_not(bool condition, std::format_string<AT...> fmt, AT&&... args);
+template<qf::derived_exception T>
+void throw_if(bool condition);
+template<qf::derived_exception T>
+void throw_if_not(bool condition);
 } // namespace qf
 
+namespace qf
+{
+template<qf::derived_exception T>
+void throw_if(bool condition, std::string_view what);
+template<qf::derived_exception T>
+void throw_if_not(bool condition, std::string_view what);
+} // namespace qf
+
+namespace qf
+{
 template<qf::derived_exception T, typename... AT>
-void qf::throw_if(bool condition, std::format_string<AT...> fmt, AT&&... args)
+void throw_if_fmt(bool condition, std::format_string<AT...> fmt, AT&&... args);
+template<qf::derived_exception T, typename... AT>
+void throw_if_not_fmt(bool condition, std::format_string<AT...> fmt, AT&&... args);
+} // namespace qf
+
+template<qf::derived_exception T>
+void qf::throw_if(bool condition)
+{
+    if(condition) {
+        throw T("unspecified fail condition");
+    }
+}
+
+template<qf::derived_exception T>
+void qf::throw_if_not(bool condition)
+{
+    if(!condition) {
+        throw T("unspecified fail condition");
+    }
+}
+
+template<qf::derived_exception T>
+void qf::throw_if(bool condition, std::string_view what)
+{
+    if(condition) {
+        throw T(std::string(what));
+    }
+}
+
+template<qf::derived_exception T>
+void qf::throw_if_not(bool condition, std::string_view what)
+{
+    if(!condition) {
+        throw T(std::string(what));
+    }
+}
+
+template<qf::derived_exception T, typename... AT>
+void qf::throw_if_fmt(bool condition, std::format_string<AT...> fmt, AT&&... args)
 {
     if(condition) {
         throw T(std::vformat(fmt.get(), std::make_format_args(args...)));
@@ -62,7 +110,7 @@ void qf::throw_if(bool condition, std::format_string<AT...> fmt, AT&&... args)
 }
 
 template<qf::derived_exception T, typename... AT>
-void qf::throw_if_not(bool condition, std::format_string<AT...> fmt, AT&&... args)
+void qf::throw_if_not_fmt(bool condition, std::format_string<AT...> fmt, AT&&... args)
 {
     if(!condition) {
         throw T(std::vformat(fmt.get(), std::make_format_args(args...)));

@@ -13,8 +13,7 @@ extern std::vector<std::vector<std::uint32_t>> PVS;
 
 namespace level
 {
-void init(void);
-void shutdown(void);
+void purge(void);
 } // namespace level
 
 namespace level

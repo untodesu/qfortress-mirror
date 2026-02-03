@@ -37,7 +37,7 @@ void client::main(void)
     std::signal(SIGINT, &signal_handler);
     std::signal(SIGTERM, &signal_handler);
 
-    qf::throw_if_not<std::runtime_error>(SDL_Init(SDL_INIT_EVENTS), "SDL_Init for events subsystem failed: {}", SDL_GetError());
+    qf::throw_if_not_fmt<std::runtime_error>(SDL_Init(SDL_INIT_EVENTS), "SDL_Init for events subsystem failed: {}", SDL_GetError());
 
     video::init();
     render::init();

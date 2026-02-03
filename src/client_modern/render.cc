@@ -16,12 +16,12 @@ static SDL_GPURenderPass* s_render_pass;
 void render::init(void)
 {
     globals::gpu_device = SDL_CreateGPUDevice(SDL_GPU_SHADERFORMAT_SPIRV, false, nullptr);
-    qf::throw_if_not<std::runtime_error>(globals::gpu_device, "SDL_CreateGPUDevice failed: {}", SDL_GetError());
+    qf::throw_if_not_fmt<std::runtime_error>(globals::gpu_device, "SDL_CreateGPUDevice failed: {}", SDL_GetError());
 
     LOG_INFO("using SDL_GPU implementation: {}", SDL_GetGPUDeviceDriver(globals::gpu_device));
 
     auto window_claimed = SDL_ClaimWindowForGPUDevice(globals::gpu_device, globals::window);
-    qf::throw_if_not<std::runtime_error>(window_claimed, "SDL_ClaimWindowForGPUDevice failed: {}", SDL_GetError());
+    qf::throw_if_not_fmt<std::runtime_error>(window_claimed, "SDL_ClaimWindowForGPUDevice failed: {}", SDL_GetError());
 }
 
 void render::init_late(void)
@@ -48,14 +48,14 @@ void render::update_late(void)
 void render::begin_frame(void)
 {
     s_command_buffer = SDL_AcquireGPUCommandBuffer(globals::gpu_device);
-    qf::throw_if_not<std::runtime_error>(s_command_buffer, "SDL_AcquireGPUCommandBuffer failed: {}", SDL_GetError());
+    qf::throw_if_not_fmt<std::runtime_error>(s_command_buffer, "SDL_AcquireGPUCommandBuffer failed: {}", SDL_GetError());
 
     Uint32 swapchain_width;
     Uint32 swapchain_height;
     auto swapchain_acquired = SDL_WaitAndAcquireGPUSwapchainTexture(s_command_buffer, globals::window, &s_swapchain_texture,
         &swapchain_width, &swapchain_height);
-    qf::throw_if_not<std::runtime_error>(swapchain_acquired, "SDL_AcquireGPUSwapchainTexture failed: {}", SDL_GetError());
-    qf::throw_if_not<std::runtime_error>(s_swapchain_texture, "swapchain texture is null");
+    qf::throw_if_not_fmt<std::runtime_error>(swapchain_acquired, "SDL_AcquireGPUSwapchainTexture failed: {}", SDL_GetError());
+    qf::throw_if_not_fmt<std::runtime_error>(s_swapchain_texture, "swapchain texture is null");
 
     SDL_GPUColorTargetInfo targetinfo {};
     targetinfo.texture = s_swapchain_texture;
