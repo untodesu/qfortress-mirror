@@ -4,12 +4,15 @@
 
 #include "core/exceptions.hh"
 #include "core/level/bnode.hh"
+#include "core/level/vertex.hh"
 
 entt::registry level::registry;
 std::shared_ptr<BNode> level::root;
 std::vector<std::vector<std::uint32_t>> level::PVS;
+std::vector<std::uint32_t> level::indices;
+std::vector<LevelVertex> level::vertices;
 
-static int find_leaf_index_internal(const BNode* node, const Eigen::Vector3f& position) noexcept
+static int find_leaf_index_internal(const BNode* node, const Eigen::Vector3f& position)
 {
     assert(position.allFinite());
 
@@ -70,6 +73,8 @@ void level::purge(void)
     level::registry.clear();
     level::root.reset();
     level::PVS.clear();
+    level::indices.clear();
+    level::vertices.clear();
 }
 
 int level::find_leaf_index(const Eigen::Vector3f& position)

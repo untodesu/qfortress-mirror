@@ -2,8 +2,6 @@
 
 #include "core/entity/components.hh"
 
-#include "core/level/level.hh"
-
 struct ComponentInfo final {
     std::string component_name;
     components::serialize_fn serialize_fn;
@@ -35,9 +33,9 @@ void components::register_component(std::string_view name, serialize_fn serializ
     s_registered_components.emplace_back(std::move(info));
 }
 
-JSON_Value* components::serialize_entity(entt::entity entity)
+JSON_Value* components::serialize_entity(const entt::registry& registry, entt::entity entity)
 {
-    assert(level::registry.valid(entity));
+    assert(registry.valid(entity));
 
     auto jsonv = json_value_init_object();
     auto json = json_value_get_object(jsonv);
@@ -45,7 +43,7 @@ JSON_Value* components::serialize_entity(entt::entity entity)
 
     for(const auto& info : s_registered_components) {
         if(info.serialize_fn) {
-            auto componentv = info.serialize_fn(entity);
+            auto componentv = info.serialize_fn(registry, entity);
             assert(componentv);
 
             json_object_set_value(json, info.component_name.c_str(), componentv);
@@ -55,9 +53,9 @@ JSON_Value* components::serialize_entity(entt::entity entity)
     return jsonv;
 }
 
-void components::deserialize_entity(entt::entity entity, const JSON_Value* jsonv)
+void components::deserialize_entity(entt::registry& registry, entt::entity entity, const JSON_Value* jsonv)
 {
-    assert(level::registry.valid(entity));
+    assert(registry.valid(entity));
     assert(jsonv);
 
     const auto json = json_value_get_object(jsonv);
@@ -84,6 +82,6 @@ void components::deserialize_entity(entt::entity entity, const JSON_Value* jsonv
             continue;
         }
 
-        info->deserialize_func(entity, componentv);
+        info->deserialize_func(registry, entity, componentv);
     }
 }

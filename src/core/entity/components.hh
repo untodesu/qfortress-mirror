@@ -7,8 +7,8 @@ class WriteBuffer;
 
 namespace components
 {
-using serialize_fn = std::function<JSON_Value*(entt::entity entity)>;
-using deserialize_fn = std::function<void(entt::entity entity, const JSON_Value* jsonv)>;
+using serialize_fn = std::function<JSON_Value*(const entt::registry& registry, entt::entity entity)>;
+using deserialize_fn = std::function<void(entt::registry& registry, entt::entity entity, const JSON_Value* jsonv)>;
 } // namespace components
 
 namespace components
@@ -18,8 +18,8 @@ void register_component(std::string_view name, serialize_fn serializer, deserial
 
 namespace components
 {
-JSON_Value* serialize_entity(entt::entity entity);
-void deserialize_entity(entt::entity entity, const JSON_Value* jsonv);
+JSON_Value* serialize_entity(const entt::registry& registry, entt::entity entity);
+void deserialize_entity(entt::registry& registry, entt::entity entity, const JSON_Value* jsonv);
 } // namespace components
 
 #endif

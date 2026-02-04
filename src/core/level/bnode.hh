@@ -12,6 +12,9 @@ public:
 
     struct Leaf final {
         int index;
+        int ebo_offset;
+        int ebo_count;
+        std::string material;
     };
 
     static void enumerate(BNode* node, const Eigen::Vector3f& position, std::vector<BNode*>& out_nodes);

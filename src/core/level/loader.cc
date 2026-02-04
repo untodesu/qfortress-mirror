@@ -3,9 +3,11 @@
 #include "core/level/loader.hh"
 
 #include "core/buffer.hh"
+#include "core/entity/components.hh"
 #include "core/exceptions.hh"
 #include "core/level/bnode.hh"
 #include "core/level/level.hh"
+#include "core/level/vertex.hh"
 #include "core/utils/physfs.hh"
 #include "core/utils/string.hh"
 
@@ -20,14 +22,17 @@ constexpr static std::uint32_t LUMP_GEO = 1; ///< Geometry nodes
 constexpr static std::uint32_t LUMP_PVS = 2; ///< Potentially visible set
 constexpr static std::uint32_t LUMP_ENT = 3; ///< Entity data as a JSON string
 constexpr static std::uint32_t LUMP_RAD = 4; ///< Lightmaps
-constexpr static std::uint32_t LUMP_VTX = 5; ///< Vertex soup to be uploaded directly into a VBO
-constexpr static std::uint32_t LUMP_IDX = 6; ///< Index soup to be uploaded directly into an IBO
+constexpr static std::uint32_t LUMP_IDX = 5; ///< Index soup to be uploaded directly into an IBO
+constexpr static std::uint32_t LUMP_VTX = 6; ///< Vertex soup to be uploaded directly into a VBO
 
 struct ProtoBNode final {
     float plane_coefs[4];
-    std::int32_t leaf_index;
-    std::int32_t front;
-    std::int32_t back;
+    std::int32_t leaf_index { -1 };
+    std::int32_t front { -1 };
+    std::int32_t back { -1 };
+    std::string material;
+    std::int32_t ebo_offset { -1 };
+    std::int32_t ebo_count { -1 };
 };
 
 static void read_geometry(ReadBuffer& buffer)
@@ -51,6 +56,9 @@ static void read_geometry(ReadBuffer& buffer)
         protonode.leaf_index = buffer.read<std::int32_t>();
         protonode.front = buffer.read<std::int32_t>();
         protonode.back = buffer.read<std::int32_t>();
+        protonode.material = buffer.read<std::string>();
+        protonode.ebo_offset = buffer.read<std::int32_t>();
+        protonode.ebo_count = buffer.read<std::int32_t>();
 
         protonodes.emplace_back(std::move(protonode));
     }
@@ -65,6 +73,9 @@ static void read_geometry(ReadBuffer& buffer)
         if(protonode.leaf_index > 0) {
             BNode::Leaf leaf;
             leaf.index = protonode.leaf_index;
+            leaf.ebo_offset = protonode.ebo_offset;
+            leaf.ebo_count = protonode.ebo_count;
+            leaf.material = protonode.material;
 
             node->data = std::move(leaf);
         }
@@ -128,12 +139,92 @@ static void read_pvs(ReadBuffer& buffer)
 
 static void read_entities(ReadBuffer& buffer)
 {
-    // empty
+    std::string source;
+    source.resize(buffer.read<std::uint32_t>());
+    buffer.read(source.data(), source.size());
+
+    qf::throw_if<std::runtime_error>(buffer.is_ended(), "unexpected end-of-file");
+
+    const auto jsonv = json_parse_string(source.c_str());
+    qf::throw_if_not<std::runtime_error>(jsonv, "json syntax error");
+
+    const auto json = json_value_get_object(jsonv);
+    qf::throw_if_not<std::runtime_error>(json, "root json value is not an Object");
+
+    auto count = json_object_get_count(json);
+
+    for(std::size_t i = 0; i < count; ++i) {
+        auto id_string = json_object_get_name(json, i);
+        auto value = json_object_get_value_at(json, i);
+
+        assert(id_string);
+        assert(value);
+
+        std::uint64_t entity_64;
+        std::string_view id_view(id_string, std::strlen(id_string));
+
+        auto check = std::from_chars(id_view.data(), id_view.data() + id_view.size(), entity_64);
+        qf::throw_if_not<std::runtime_error>(check.ec == std::errc(), "invalid entity id");
+
+        auto entity_request = static_cast<entt::entity>(entity_64);
+        auto entity = level::registry.create(entity_request);
+        qf::throw_if_not<std::runtime_error>(entity_request == entity, "entity id mismatch");
+
+        components::deserialize_entity(level::registry, entity, value);
+    }
 }
 
 static void read_lightmaps(ReadBuffer& buffer)
 {
     // empty
+}
+
+static void read_indices(ReadBuffer& buffer)
+{
+    level::indices.resize(buffer.read<std::uint32_t>());
+
+    for(std::size_t i = 0; i < level::indices.size(); ++i) {
+        qf::throw_if<std::runtime_error>(buffer.is_ended(), "unexpected end-of-file");
+
+        level::indices[i] = buffer.read<std::uint32_t>();
+    }
+}
+
+static void read_vertices(ReadBuffer& buffer)
+{
+    level::vertices.resize(buffer.read<std::uint32_t>());
+
+    for(std::size_t i = 0; i < level::vertices.size(); ++i) {
+        qf::throw_if<std::runtime_error>(buffer.is_ended(), "unexpected end-of-file");
+
+        LevelVertex vertex;
+
+        vertex.position.x() = buffer.read<float>();
+        vertex.position.y() = buffer.read<float>();
+        vertex.position.z() = buffer.read<float>();
+        assert(vertex.position.allFinite());
+
+        vertex.normal.x() = buffer.read<float>();
+        vertex.normal.y() = buffer.read<float>();
+        vertex.normal.z() = buffer.read<float>();
+        assert(vertex.normal.allFinite());
+
+        vertex.tangent.x() = buffer.read<float>();
+        vertex.tangent.y() = buffer.read<float>();
+        vertex.tangent.z() = buffer.read<float>();
+        vertex.tangent.w() = buffer.read<float>();
+        assert(vertex.tangent.allFinite());
+
+        vertex.texcoord.x() = buffer.read<float>();
+        vertex.texcoord.y() = buffer.read<float>();
+        assert(vertex.texcoord.allFinite());
+
+        vertex.lightmap.x() = buffer.read<float>();
+        vertex.lightmap.y() = buffer.read<float>();
+        assert(vertex.lightmap.allFinite());
+
+        qf::throw_if<std::runtime_error>(buffer.is_ended(), "unexpected end-of-file");
+    }
 }
 
 void level::load(std::string_view path)
@@ -170,10 +261,14 @@ void level::load(std::string_view path)
 
     level::purge();
 
+    std::unordered_set<std::uint32_t> loaded_lumps;
+
     for(std::uint32_t i = 0; i < lumpcnt; ++i) {
         qf::throw_if<std::runtime_error>(buffer.is_ended(), "unexpected end-of-file");
 
         auto lumptype = buffer.read<std::uint32_t>();
+
+        qf::throw_if_fmt<std::runtime_error>(loaded_lumps.contains(lumptype), "lump {} present twice", lumptype);
 
         switch(lumptype) {
             case LUMP_GEO:
@@ -192,10 +287,33 @@ void level::load(std::string_view path)
                 read_lightmaps(buffer);
                 break;
 
+            case LUMP_IDX:
+                read_indices(buffer);
+                break;
+
+            case LUMP_VTX:
+                read_vertices(buffer);
+                break;
+
             default:
                 throw qf::runtime_error("unknown lump type: {}", lumptype);
         }
+
+        loaded_lumps.insert(lumptype);
     }
+
+    auto inv_magic_0 = buffer.read<std::uint8_t>();
+    auto inv_magic_1 = buffer.read<std::uint8_t>();
+    auto inv_magic_2 = buffer.read<std::uint8_t>();
+    auto inv_magic_3 = buffer.read<std::uint8_t>();
+
+    auto inv_signature_valid = true;
+    inv_signature_valid = inv_signature_valid && inv_magic_0 == MAGIC_BYTE_3;
+    inv_signature_valid = inv_signature_valid && inv_magic_1 == MAGIC_BYTE_2;
+    inv_signature_valid = inv_signature_valid && inv_magic_2 == MAGIC_BYTE_1;
+    inv_signature_valid = inv_signature_valid && inv_magic_3 == MAGIC_BYTE_0;
+
+    qf::throw_if_not<std::runtime_error>(inv_signature_valid, "invalid file signature");
 
     if(!buffer.is_ended()) {
         LOG_WARNING("{}: garbage data after expected end-of-file", path_unfucked);
@@ -204,6 +322,7 @@ void level::load(std::string_view path)
 
 void level::save(std::string_view path)
 {
+    // empty, will implement later
 }
 
 bool level::safe_load(std::string_view path)

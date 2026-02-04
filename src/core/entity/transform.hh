@@ -4,6 +4,8 @@
 
 class Transform final {
 public:
+    static void register_component(void);
+
     Transform(void) = default;
     explicit Transform(const Eigen::Affine3f& affine) noexcept;
     explicit Transform(const Eigen::Vector3f& position, const Eigen::Quaternionf& orientation) noexcept;

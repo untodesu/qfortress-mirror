@@ -4,6 +4,8 @@
 
 class CurrentLeaf final {
 public:
+    static void register_component(void);
+
     static void fixed_update(void);
 
     explicit CurrentLeaf(int leaf_index);

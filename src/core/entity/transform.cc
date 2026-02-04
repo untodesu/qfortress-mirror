@@ -2,6 +2,94 @@
 
 #include "core/entity/transform.hh"
 
+#include "core/entity/components.hh"
+
+static JSON_Value* serialize_transform(const entt::registry& registry, entt::entity entity)
+{
+    assert(registry.valid(entity));
+
+    auto jsonv = json_value_init_array();
+    auto json = json_value_get_array(jsonv);
+    assert(json);
+
+    const auto& transform = registry.get<Transform>(entity);
+    const auto& affine = transform.affine();
+
+    Eigen::Vector3f linear_xplus(affine.linear().col(0));
+    json_array_append_number(json, linear_xplus.x());
+    json_array_append_number(json, linear_xplus.y());
+    json_array_append_number(json, linear_xplus.z());
+
+    Eigen::Vector3f linear_yplus(affine.linear().col(1));
+    json_array_append_number(json, linear_yplus.x());
+    json_array_append_number(json, linear_yplus.y());
+    json_array_append_number(json, linear_yplus.z());
+
+    Eigen::Vector3f linear_zplus(affine.linear().col(2));
+    json_array_append_number(json, linear_zplus.x());
+    json_array_append_number(json, linear_zplus.y());
+    json_array_append_number(json, linear_zplus.z());
+
+    Eigen::Vector3f translation(affine.translation());
+    json_array_append_number(json, translation.x());
+    json_array_append_number(json, translation.y());
+    json_array_append_number(json, translation.z());
+
+    assert(12 == json_array_get_count(json));
+
+    return jsonv;
+}
+
+static void deserialize_transform(entt::registry& registry, entt::entity entity, const JSON_Value* jsonv)
+{
+    assert(registry.valid(entity));
+    assert(jsonv);
+
+    const auto json = json_value_get_array(jsonv);
+    assert(json);
+
+    assert(12 == json_array_get_count(json));
+
+    Eigen::Vector3f linear_xplus;
+    linear_xplus.x() = static_cast<float>(json_array_get_number(json, 0));
+    linear_xplus.y() = static_cast<float>(json_array_get_number(json, 1));
+    linear_xplus.z() = static_cast<float>(json_array_get_number(json, 2));
+    assert(linear_xplus.allFinite());
+
+    Eigen::Vector3f linear_yplus;
+    linear_yplus.x() = static_cast<float>(json_array_get_number(json, 3));
+    linear_yplus.y() = static_cast<float>(json_array_get_number(json, 4));
+    linear_yplus.z() = static_cast<float>(json_array_get_number(json, 5));
+    assert(linear_yplus.allFinite());
+
+    Eigen::Vector3f linear_zplus;
+    linear_zplus.x() = static_cast<float>(json_array_get_number(json, 6));
+    linear_zplus.y() = static_cast<float>(json_array_get_number(json, 7));
+    linear_zplus.z() = static_cast<float>(json_array_get_number(json, 8));
+    assert(linear_zplus.allFinite());
+
+    Eigen::Vector3f translation;
+    translation.x() = static_cast<float>(json_array_get_number(json, 9));
+    translation.y() = static_cast<float>(json_array_get_number(json, 10));
+    translation.z() = static_cast<float>(json_array_get_number(json, 11));
+    assert(translation.allFinite());
+
+    Eigen::Affine3f affine(Eigen::Affine3f::Identity());
+    affine.linear().col(0) = linear_xplus;
+    affine.linear().col(1) = linear_yplus;
+    affine.linear().col(2) = linear_zplus;
+    affine.translation() = translation;
+
+    assert(affine.matrix().allFinite());
+
+    registry.emplace_or_replace<Transform>(entity, affine);
+}
+
+void Transform::register_component(void)
+{
+    components::register_component("transform", &serialize_transform, &deserialize_transform);
+}
+
 Transform::Transform(const Eigen::Affine3f& affine) noexcept : m_affine(affine)
 {
     assert(affine.matrix().allFinite());

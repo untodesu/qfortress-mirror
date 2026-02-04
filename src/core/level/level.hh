@@ -3,12 +3,15 @@
 #pragma once
 
 class BNode;
+struct LevelVertex;
 
 namespace level
 {
 extern entt::registry registry;
 extern std::shared_ptr<BNode> root;
 extern std::vector<std::vector<std::uint32_t>> PVS;
+extern std::vector<std::uint32_t> indices;
+extern std::vector<LevelVertex> vertices;
 } // namespace level
 
 namespace level
