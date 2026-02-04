@@ -21,6 +21,11 @@ void purge(void);
 
 namespace level
 {
+/// Generate a flattened list of all the BSP nodes present
+/// @param out_nodes The flattened list of all the nodes
+/// @param out_indices An index mapping for each node
+void flatten_bsp(std::vector<const BNode*>& out_nodes, std::unordered_map<const BNode*, std::int32_t>& out_indices);
+
 /// Locate a leaf index in which a point is located
 /// @param position Position to locate leaf for
 /// @return Leaf index or -1 if not found

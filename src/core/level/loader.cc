@@ -125,7 +125,7 @@ static void read_pvs(ReadBuffer& buffer)
 
         pvsentry.clear();
 
-        for(std::uint32_t j = 0; j < nodecnt; ++i) {
+        for(std::uint32_t j = 0; j < nodecnt; ++j) {
             qf::throw_if<std::runtime_error>(buffer.is_ended(), "unexpected end-of-file");
 
             pvsentry.push_back(buffer.read<std::uint32_t>());
@@ -172,6 +172,8 @@ static void read_entities(ReadBuffer& buffer)
 
         components::deserialize_entity(level::registry, entity, value);
     }
+
+    json_value_free(jsonv);
 }
 
 static void read_lightmaps(ReadBuffer& buffer)
@@ -224,6 +226,131 @@ static void read_vertices(ReadBuffer& buffer)
         assert(vertex.lightmap.allFinite());
 
         qf::throw_if<std::runtime_error>(buffer.is_ended(), "unexpected end-of-file");
+    }
+}
+
+static void write_geometry(WriteBuffer& buffer)
+{
+    std::vector<const BNode*> nodes;
+    std::unordered_map<const BNode*, std::int32_t> indices;
+    level::flatten_bsp(nodes, indices);
+
+    buffer.write<std::uint32_t>(static_cast<std::uint32_t>(nodes.size()));
+
+    for(const auto node : nodes) {
+        if(const auto leaf = std::get_if<BNode::Leaf>(&node->data)) {
+            buffer.write<float>(std::numeric_limits<float>::quiet_NaN());
+            buffer.write<float>(std::numeric_limits<float>::quiet_NaN());
+            buffer.write<float>(std::numeric_limits<float>::quiet_NaN());
+            buffer.write<float>(std::numeric_limits<float>::quiet_NaN());
+
+            buffer.write<std::int32_t>(leaf->index);
+            buffer.write<std::int32_t>(-1);
+            buffer.write<std::int32_t>(-1);
+
+            buffer.write<std::string_view>(leaf->material);
+            buffer.write<std::int32_t>(leaf->ebo_offset);
+            buffer.write<std::int32_t>(leaf->ebo_count);
+        }
+        else if(const auto internal = std::get_if<BNode::Internal>(&node->data)) {
+            buffer.write<float>(internal->plane.coeffs()[0]);
+            buffer.write<float>(internal->plane.coeffs()[1]);
+            buffer.write<float>(internal->plane.coeffs()[2]);
+            buffer.write<float>(internal->plane.coeffs()[3]);
+
+            buffer.write<std::int32_t>(-1);
+            buffer.write<std::int32_t>(internal->front ? indices.at(internal->front.get()) : -1);
+            buffer.write<std::int32_t>(internal->back ? indices.at(internal->back.get()) : -1);
+
+            buffer.write<std::string_view>(std::string_view());
+            buffer.write<std::int32_t>(-1);
+            buffer.write<std::int32_t>(-1);
+        }
+    }
+}
+
+static void write_pvs(WriteBuffer& buffer)
+{
+    auto nodecnt = static_cast<std::uint32_t>(level::PVS.size());
+
+    buffer.write<std::uint32_t>(nodecnt);
+
+    for(const auto& row : level::PVS) {
+        for(std::size_t i = 0; i < nodecnt; ++i) {
+            if(i < row.size()) {
+                buffer.write<std::uint32_t>(row[i]);
+            }
+            else {
+                buffer.write<std::uint32_t>(0);
+            }
+        }
+    }
+}
+
+static void write_entities(WriteBuffer& buffer)
+{
+    auto jsonv = json_value_init_object();
+    auto json = json_value_get_object(jsonv);
+    assert(jsonv);
+
+    auto view = level::registry.view<entt::entity>();
+
+    for(auto [entity] : view.each()) {
+        auto value = components::serialize_entity(level::registry, entity);
+        assert(value);
+
+        auto entity_64 = static_cast<std::uint64_t>(entity);
+        auto id_string = std::to_string(entity_64);
+
+        json_object_set_value(json, id_string.c_str(), value);
+    }
+
+    std::string source;
+    source.assign(json_serialize_to_string(jsonv));
+
+    json_value_free(jsonv);
+
+    buffer.write<std::uint32_t>(static_cast<std::uint32_t>(source.size()));
+    buffer.write(source.data(), source.size());
+}
+
+static void write_lightmaps(WriteBuffer& buffer)
+{
+    // empty
+}
+
+static void write_indices(WriteBuffer& buffer)
+{
+    buffer.write<std::uint32_t>(static_cast<std::uint32_t>(level::indices.size()));
+
+    for(auto index : level::indices) {
+        buffer.write<std::uint32_t>(index);
+    }
+}
+
+static void write_vertices(WriteBuffer& buffer)
+{
+    buffer.write<std::uint32_t>(static_cast<std::uint32_t>(level::vertices.size()));
+
+    for(const auto& vertex : level::vertices) {
+        buffer.write<float>(vertex.position.x());
+        buffer.write<float>(vertex.position.y());
+        buffer.write<float>(vertex.position.z());
+
+        buffer.write<float>(vertex.normal.x());
+        buffer.write<float>(vertex.normal.y());
+        buffer.write<float>(vertex.normal.z());
+
+        buffer.write<float>(vertex.tangent.x());
+        buffer.write<float>(vertex.tangent.y());
+        buffer.write<float>(vertex.tangent.z());
+        buffer.write<float>(vertex.tangent.w());
+
+        buffer.write<float>(vertex.texcoord.x());
+        buffer.write<float>(vertex.texcoord.y());
+
+        buffer.write<float>(vertex.lightmap.x());
+        buffer.write<float>(vertex.lightmap.y());
     }
 }
 
@@ -322,7 +449,60 @@ void level::load(std::string_view path)
 
 void level::save(std::string_view path)
 {
-    // empty, will implement later
+    WriteBuffer buffer;
+
+    buffer.write<std::uint8_t>(MAGIC_BYTE_0);
+    buffer.write<std::uint8_t>(MAGIC_BYTE_1);
+    buffer.write<std::uint8_t>(MAGIC_BYTE_2);
+    buffer.write<std::uint8_t>(MAGIC_BYTE_3);
+
+    std::uint32_t lumpcnt = 2; // at least geometry and entities
+
+    if(level::PVS.size()) {
+        lumpcnt += 1; // LUMP_PVS
+    }
+
+    if(level::indices.size()) {
+        lumpcnt += 1; // LUMP_IDX
+    }
+
+    if(level::vertices.size()) {
+        lumpcnt += 1; // LUMP_VTX
+    }
+
+    buffer.write<std::uint32_t>(QFLV_VERSION);
+    buffer.write<std::uint32_t>(lumpcnt);
+
+    buffer.write<std::uint32_t>(LUMP_GEO);
+    write_geometry(buffer);
+
+    if(level::PVS.size()) {
+        buffer.write<std::uint32_t>(LUMP_PVS);
+        write_pvs(buffer);
+    }
+
+    buffer.write<std::uint32_t>(LUMP_ENT);
+    write_entities(buffer);
+
+    if(level::indices.size()) {
+        buffer.write<std::uint32_t>(LUMP_IDX);
+        write_indices(buffer);
+    }
+
+    if(level::vertices.size()) {
+        buffer.write<std::uint32_t>(LUMP_VTX);
+        write_vertices(buffer);
+    }
+
+    buffer.write<std::uint8_t>(MAGIC_BYTE_3);
+    buffer.write<std::uint8_t>(MAGIC_BYTE_2);
+    buffer.write<std::uint8_t>(MAGIC_BYTE_1);
+    buffer.write<std::uint8_t>(MAGIC_BYTE_0);
+
+    auto file = buffer.to_file(path);
+    qf::throw_if_not<std::runtime_error>(file, utils::physfs_error());
+
+    PHYSFS_close(file);
 }
 
 bool level::safe_load(std::string_view path)

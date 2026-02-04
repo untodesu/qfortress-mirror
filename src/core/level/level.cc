@@ -68,6 +68,20 @@ static void enumerate_visible_internal(const BNode* node, int from_leaf, const E
     }
 }
 
+static void flatten_bsp_internal(const BNode* node, std::vector<const BNode*>& out_nodes,
+    std::unordered_map<const BNode*, std::int32_t>& out_indices)
+{
+    if(node) {
+        out_indices.insert_or_assign(node, static_cast<std::int32_t>(out_nodes.size()));
+        out_nodes.push_back(node);
+
+        if(const auto internal = std::get_if<BNode::Internal>(&node->data)) {
+            flatten_bsp_internal(internal->front.get(), out_nodes, out_indices);
+            flatten_bsp_internal(internal->back.get(), out_nodes, out_indices);
+        }
+    }
+}
+
 void level::purge(void)
 {
     level::registry.clear();
@@ -75,6 +89,14 @@ void level::purge(void)
     level::PVS.clear();
     level::indices.clear();
     level::vertices.clear();
+}
+
+void level::flatten_bsp(std::vector<const BNode*>& out_nodes, std::unordered_map<const BNode*, std::int32_t>& out_indices)
+{
+    out_nodes.clear();
+    out_indices.clear();
+
+    flatten_bsp_internal(level::root.get(), out_nodes, out_indices);
 }
 
 int level::find_leaf_index(const Eigen::Vector3f& position)
