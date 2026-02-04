@@ -18,6 +18,12 @@
                 "${workspaceFolder}/build/unix-release/_deps/download_sdl3-src/include",
                 "${workspaceFolder}/build/win32/_deps/download_sdl3-src/include",
                 "${workspaceFolder}/build/win64/_deps/download_sdl3-src/include",
+                "${workspaceFolder}/external/eigen/include",
+                "${workspaceFolder}/external/enet/include",
+                "${workspaceFolder}/external/entt/include",
+                "${workspaceFolder}/external/parson/include",
+                "${workspaceFolder}/external/physfs/include",
+                "${workspaceFolder}/external/stb/include",
                 "${workspaceFolder}/external/uulog/include",
                 "${workspaceFolder}/src",
                 "${default}"

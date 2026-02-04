@@ -24,6 +24,8 @@ add_library(core STATIC
     "${CMAKE_CURRENT_LIST_DIR}/res/image.hh"
     "${CMAKE_CURRENT_LIST_DIR}/res/resource.cc"
     "${CMAKE_CURRENT_LIST_DIR}/res/resource.hh"
+    "${CMAKE_CURRENT_LIST_DIR}/utils/epoch.cc"
+    "${CMAKE_CURRENT_LIST_DIR}/utils/epoch.hh"
     "${CMAKE_CURRENT_LIST_DIR}/utils/physfs.cc"
     "${CMAKE_CURRENT_LIST_DIR}/utils/physfs.hh"
     "${CMAKE_CURRENT_LIST_DIR}/utils/string.cc"

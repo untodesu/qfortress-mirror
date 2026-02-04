@@ -31,6 +31,8 @@ static int find_leaf_index_internal(const BNode* node, const Eigen::Vector3f& po
 
         throw qf::logic_error("invalid variant state of BNode::data");
     }
+
+    return -1;
 }
 
 static void enumerate_visible_internal(const BNode* node, int from_leaf, const Eigen::Vector3f& position,

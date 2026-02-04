@@ -20,6 +20,8 @@ constexpr static std::uint32_t LUMP_GEO = 1; ///< Geometry nodes
 constexpr static std::uint32_t LUMP_PVS = 2; ///< Potentially visible set
 constexpr static std::uint32_t LUMP_ENT = 3; ///< Entity data as a JSON string
 constexpr static std::uint32_t LUMP_RAD = 4; ///< Lightmaps
+constexpr static std::uint32_t LUMP_VTX = 5; ///< Vertex soup to be uploaded directly into a VBO
+constexpr static std::uint32_t LUMP_IDX = 6; ///< Index soup to be uploaded directly into an IBO
 
 struct ProtoBNode final {
     float plane_coefs[4];
