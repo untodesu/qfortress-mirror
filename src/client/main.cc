@@ -2,7 +2,11 @@
 
 #include "client/main.hh"
 
+#include "core/entity/current_leaf.hh"
+#include "core/entity/transform.hh"
 #include "core/exceptions.hh"
+#include "core/level/level.hh"
+#include "core/level/loader.hh"
 #include "core/utils/epoch.hh"
 #include "core/version.hh"
 
@@ -45,6 +49,16 @@ void client::main(void)
 
     video::init_late();
     render::init_late();
+
+    Transform::register_component();
+    CurrentLeaf::register_component();
+
+    level::purge();
+
+    auto entity = level::registry.create();
+    level::registry.emplace_or_replace<Transform>(entity, Transform({ 123.0f, 456.0f, 789.0f }, Eigen::Quaternionf::Identity()));
+
+    level::save("testlevel.bsp");
 
     s_is_running.store(true);
 

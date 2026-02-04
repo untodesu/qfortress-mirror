@@ -8,36 +8,39 @@ static JSON_Value* serialize_transform(const entt::registry& registry, entt::ent
 {
     assert(registry.valid(entity));
 
-    auto jsonv = json_value_init_array();
-    auto json = json_value_get_array(jsonv);
-    assert(json);
+    if(const auto transform = registry.try_get<Transform>(entity)) {
+        const auto& affine = transform->affine();
 
-    const auto& transform = registry.get<Transform>(entity);
-    const auto& affine = transform.affine();
+        auto jsonv = json_value_init_array();
+        auto json = json_value_get_array(jsonv);
+        assert(json);
 
-    Eigen::Vector3f linear_xplus(affine.linear().col(0));
-    json_array_append_number(json, linear_xplus.x());
-    json_array_append_number(json, linear_xplus.y());
-    json_array_append_number(json, linear_xplus.z());
+        Eigen::Vector3f linear_xplus(affine.linear().col(0));
+        json_array_append_number(json, linear_xplus.x());
+        json_array_append_number(json, linear_xplus.y());
+        json_array_append_number(json, linear_xplus.z());
 
-    Eigen::Vector3f linear_yplus(affine.linear().col(1));
-    json_array_append_number(json, linear_yplus.x());
-    json_array_append_number(json, linear_yplus.y());
-    json_array_append_number(json, linear_yplus.z());
+        Eigen::Vector3f linear_yplus(affine.linear().col(1));
+        json_array_append_number(json, linear_yplus.x());
+        json_array_append_number(json, linear_yplus.y());
+        json_array_append_number(json, linear_yplus.z());
 
-    Eigen::Vector3f linear_zplus(affine.linear().col(2));
-    json_array_append_number(json, linear_zplus.x());
-    json_array_append_number(json, linear_zplus.y());
-    json_array_append_number(json, linear_zplus.z());
+        Eigen::Vector3f linear_zplus(affine.linear().col(2));
+        json_array_append_number(json, linear_zplus.x());
+        json_array_append_number(json, linear_zplus.y());
+        json_array_append_number(json, linear_zplus.z());
 
-    Eigen::Vector3f translation(affine.translation());
-    json_array_append_number(json, translation.x());
-    json_array_append_number(json, translation.y());
-    json_array_append_number(json, translation.z());
+        Eigen::Vector3f translation(affine.translation());
+        json_array_append_number(json, translation.x());
+        json_array_append_number(json, translation.y());
+        json_array_append_number(json, translation.z());
 
-    assert(12 == json_array_get_count(json));
+        assert(12 == json_array_get_count(json));
 
-    return jsonv;
+        return jsonv;
+    }
+
+    return nullptr;
 }
 
 static void deserialize_transform(entt::registry& registry, entt::entity entity, const JSON_Value* jsonv)

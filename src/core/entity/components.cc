@@ -43,10 +43,9 @@ JSON_Value* components::serialize_entity(const entt::registry& registry, entt::e
 
     for(const auto& info : s_registered_components) {
         if(info.serialize_fn) {
-            auto componentv = info.serialize_fn(registry, entity);
-            assert(componentv);
-
-            json_object_set_value(json, info.component_name.c_str(), componentv);
+            if(auto componentv = info.serialize_fn(registry, entity)) {
+                json_object_set_value(json, info.component_name.c_str(), componentv);
+            }
         }
     }
 

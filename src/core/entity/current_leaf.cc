@@ -10,9 +10,11 @@ static JSON_Value* serialize_current_leaf(const entt::registry& registry, entt::
 {
     assert(registry.valid(entity));
 
-    auto& current_leaf = registry.get<CurrentLeaf>(entity);
+    if(const auto current_leaf = registry.try_get<CurrentLeaf>(entity)) {
+        return json_value_init_number(current_leaf->leaf_index());
+    }
 
-    return json_value_init_number(current_leaf.leaf_index());
+    return nullptr;
 }
 
 static void deserialize_current_leaf(entt::registry& registry, entt::entity entity, const JSON_Value* jsonv)

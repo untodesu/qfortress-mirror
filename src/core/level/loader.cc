@@ -456,10 +456,18 @@ void level::save(std::string_view path)
     buffer.write<std::uint8_t>(MAGIC_BYTE_2);
     buffer.write<std::uint8_t>(MAGIC_BYTE_3);
 
-    std::uint32_t lumpcnt = 2; // at least geometry and entities
+    std::uint32_t lumpcnt = 0;
+
+    if(level::root) {
+        lumpcnt += 1; // LUMP_GEO
+    }
 
     if(level::PVS.size()) {
         lumpcnt += 1; // LUMP_PVS
+    }
+
+    if(level::registry.view<entt::entity>().size()) {
+        lumpcnt += 1; // LUMP_ENT
     }
 
     if(level::indices.size()) {
@@ -473,16 +481,20 @@ void level::save(std::string_view path)
     buffer.write<std::uint32_t>(QFLV_VERSION);
     buffer.write<std::uint32_t>(lumpcnt);
 
-    buffer.write<std::uint32_t>(LUMP_GEO);
-    write_geometry(buffer);
+    if(level::root) {
+        buffer.write<std::uint32_t>(LUMP_GEO);
+        write_geometry(buffer);
+    }
 
     if(level::PVS.size()) {
         buffer.write<std::uint32_t>(LUMP_PVS);
         write_pvs(buffer);
     }
 
-    buffer.write<std::uint32_t>(LUMP_ENT);
-    write_entities(buffer);
+    if(level::registry.view<entt::entity>().size()) {
+        buffer.write<std::uint32_t>(LUMP_ENT);
+        write_entities(buffer);
+    }
 
     if(level::indices.size()) {
         buffer.write<std::uint32_t>(LUMP_IDX);
