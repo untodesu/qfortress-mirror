@@ -33,9 +33,20 @@ struct ProtoBNode final {
     std::int32_t ebo_count { -1 };
 };
 
+void Level::set_geometry(std::vector<std::uint32_t> new_indices, std::vector<LevelVertex> new_vertices) noexcept
+{
+    m_indices = std::move(new_indices);
+    m_vertices = std::move(new_vertices);
+}
+
 const BNode* Level::root(void) const noexcept
 {
     return m_root.get();
+}
+
+void Level::set_root(std::shared_ptr<BNode> new_root) noexcept
+{
+    m_root = new_root;
 }
 
 void Level::purge(void) noexcept

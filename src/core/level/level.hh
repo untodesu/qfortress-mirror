@@ -20,8 +20,10 @@ public:
 
     constexpr const std::vector<std::uint32_t>& indices(void) const noexcept;
     constexpr const std::vector<LevelVertex>& vertices(void) const noexcept;
+    void set_geometry(std::vector<std::uint32_t> new_indices, std::vector<LevelVertex> new_vertices) noexcept;
 
     const BNode* root(void) const noexcept;
+    void set_root(std::shared_ptr<BNode> new_root) noexcept;
 
     /// Purges a level
     void purge(void) noexcept;
