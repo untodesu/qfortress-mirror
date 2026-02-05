@@ -5,7 +5,6 @@
 #include "core/buffer.hh"
 #include "core/entity/components.hh"
 #include "core/exceptions.hh"
-#include "core/level/bnode.hh"
 #include "core/level/vertex.hh"
 #include "core/utils/physfs.hh"
 #include "core/utils/string.hh"
@@ -24,23 +23,13 @@ constexpr static std::uint32_t LUMP_ENT = 4; ///< Entity data as a JSON string
 constexpr static std::uint32_t LUMP_RAD = 5; ///< Lightmaps
 constexpr static std::uint32_t LUMP_VTX = 6; ///< Vertex and index buffer
 
-struct ProtoBNode final {
-    float plane_coefs[4];
-    std::int32_t leaf_index { -1 };
-    std::int32_t front { -1 };
-    std::int32_t back { -1 };
-    std::int32_t material { -1 };
-    std::int32_t ebo_offset { -1 };
-    std::int32_t ebo_count { -1 };
-};
-
 void Level::set_geometry(std::vector<std::uint32_t> new_indices, std::vector<LevelVertex> new_vertices) noexcept
 {
     m_indices = std::move(new_indices);
     m_vertices = std::move(new_vertices);
 }
 
-void Level::set_nodes(std::vector<BNode> new_nodes, std::int32_t new_root) noexcept
+void Level::set_nodes(std::vector<Node> new_nodes, std::int32_t new_root) noexcept
 {
     m_nodes = std::move(new_nodes);
     m_root_node = new_root;
@@ -116,6 +105,10 @@ void Level::load(std::string_view path)
                 read_lump_pvs(buffer);
                 break;
 
+            case LUMP_MAT:
+                read_lump_mat(buffer);
+                break;
+
             case LUMP_ENT:
                 read_lump_ent(buffer);
                 break;
@@ -164,12 +157,16 @@ void Level::save(std::string_view path) const
 
     std::uint32_t lumpcnt = 0;
 
-    if(m_nodes) {
+    if(m_nodes.size()) {
         lumpcnt += 1; // LUMP_BSP
     }
 
     if(m_pvs.size()) {
         lumpcnt += 1; // LUMP_PVS
+    }
+
+    if(m_materials.size()) {
+        lumpcnt += 1; // LUMP_MAT
     }
 
     if(m_registry.view<entt::entity>().size()) {
@@ -183,7 +180,7 @@ void Level::save(std::string_view path) const
     buffer.write<std::uint32_t>(QFLV_VERSION);
     buffer.write<std::uint32_t>(lumpcnt);
 
-    if(m_root) {
+    if(m_nodes.size()) {
         buffer.write<std::uint32_t>(LUMP_BSP);
         write_lump_bsp(buffer);
     }
@@ -191,6 +188,11 @@ void Level::save(std::string_view path) const
     if(m_pvs.size()) {
         buffer.write<std::uint32_t>(LUMP_PVS);
         write_lump_pvs(buffer);
+    }
+
+    if(m_materials.size()) {
+        buffer.write<std::uint32_t>(LUMP_MAT);
+        write_lump_mat(buffer);
     }
 
     if(m_registry.view<entt::entity>().size()) {
@@ -246,27 +248,19 @@ bool Level::save_safe(std::string_view path) const noexcept
     }
 }
 
-void Level::flatten_bsp(std::vector<const BNode*>& out_nodes, std::unordered_map<const BNode*, std::int32_t>& out_indices) const
+std::int32_t Level::find_leaf_index(const Eigen::Vector3f& position) const
 {
-    out_nodes.clear();
-    out_indices.clear();
-
-    flatten_bsp_internal(m_root.get(), out_nodes, out_indices);
+    return find_leaf_index_internal(m_root_node, position);
 }
 
-int Level::find_leaf_index(const Eigen::Vector3f& position) const
-{
-    return find_leaf_index_internal(m_root.get(), position);
-}
-
-void Level::enumerate_visible(int from_leaf, const Eigen::Vector3f& position, std::vector<const BNode*>& out_nodes) const
+void Level::enumerate_visible(std::int32_t from_leaf, const Eigen::Vector3f& position, std::vector<const Node*>& out_nodes) const
 {
     out_nodes.clear();
 
-    enumerate_visible_internal(m_root.get(), from_leaf, position, out_nodes);
+    enumerate_visible_internal(m_root_node, from_leaf, position, out_nodes);
 }
 
-bool Level::is_visible(int from_leaf, int to_leaf) const
+bool Level::is_visible(std::int32_t from_leaf, std::int32_t to_leaf) const
 {
     if(from_leaf < 0 || from_leaf >= m_pvs.size() || to_leaf < 0) {
         return true; // out of bounds, assume visible
@@ -283,82 +277,107 @@ bool Level::is_visible(int from_leaf, int to_leaf) const
     return false;
 }
 
-void Level::flatten_bsp_internal(const BNode* node, std::vector<const BNode*>& out_nodes,
-    std::unordered_map<const BNode*, std::int32_t>& out_indices) const
+void Level::enumerate(const Eigen::Vector3f& position, std::vector<const Node*>& out_nodes) const
 {
-    if(node) {
-        out_indices.insert_or_assign(node, static_cast<std::int32_t>(out_nodes.size()));
-        out_nodes.push_back(node);
+    out_nodes.clear();
 
-        if(const auto internal = std::get_if<BNode::Internal>(&node->data)) {
-            flatten_bsp_internal(internal->front.get(), out_nodes, out_indices);
-            flatten_bsp_internal(internal->back.get(), out_nodes, out_indices);
-        }
-    }
+    enumerate_internal(m_root_node, position, out_nodes);
 }
 
-int Level::find_leaf_index_internal(const BNode* node, const Eigen::Vector3f& position) const
+std::int32_t Level::find_leaf_index_internal(std::int32_t node_index, const Eigen::Vector3f& position) const
 {
     assert(position.allFinite());
 
-    if(node) {
-        if(const auto leaf = std::get_if<BNode::Leaf>(&node->data)) {
-            return leaf->index;
+    if(node_index >= 0 && node_index < m_nodes.size()) {
+        const auto node = &m_nodes[node_index];
+
+        if(const auto leaf = std::get_if<Leaf>(node)) {
+            return node_index;
         }
 
-        if(const auto internal = std::get_if<BNode::Internal>(&node->data)) {
+        if(const auto internal = std::get_if<Internal>(node)) {
             auto distance = internal->plane.signedDistance(position);
 
             if(distance >= 0.0f) {
-                return find_leaf_index_internal(internal->front.get(), position);
+                return find_leaf_index_internal(internal->front, position);
             }
             else {
-                return find_leaf_index_internal(internal->back.get(), position);
+                return find_leaf_index_internal(internal->back, position);
             }
         }
 
-        throw qf::logic_error("invalid variant state of BNode::data");
+        throw qf::logic_error("invalid variant state of Node::data");
     }
 
     return -1;
 }
 
-void Level::enumerate_visible_internal(const BNode* node, int from_leaf, const Eigen::Vector3f& position,
-    std::vector<const BNode*>& out_nodes) const
+void Level::enumerate_visible_internal(std::int32_t node_index, std::int32_t from_leaf, const Eigen::Vector3f& position,
+    std::vector<const Node*>& out_nodes) const
 {
     assert(position.allFinite());
 
-    if(node) {
-        if(const auto internal = std::get_if<BNode::Internal>(&node->data)) {
+    if(node_index >= 0 && node_index < m_nodes.size()) {
+        const auto node = &m_nodes[node_index];
+
+        if(const auto internal = std::get_if<Internal>(node)) {
             auto distance = internal->plane.signedDistance(position);
 
             if(distance >= 0.0f) {
-                enumerate_visible_internal(internal->back.get(), from_leaf, position, out_nodes);
+                enumerate_visible_internal(internal->back, from_leaf, position, out_nodes);
                 out_nodes.push_back(node);
-                enumerate_visible_internal(internal->front.get(), from_leaf, position, out_nodes);
+                enumerate_visible_internal(internal->front, from_leaf, position, out_nodes);
             }
             else {
-                enumerate_visible_internal(internal->front.get(), from_leaf, position, out_nodes);
+                enumerate_visible_internal(internal->front, from_leaf, position, out_nodes);
                 out_nodes.push_back(node);
-                enumerate_visible_internal(internal->back.get(), from_leaf, position, out_nodes);
+                enumerate_visible_internal(internal->back, from_leaf, position, out_nodes);
             }
         }
-        else if(const auto leaf = std::get_if<BNode::Leaf>(&node->data)) {
-            if(is_visible(from_leaf, leaf->index)) {
+        else if(const auto leaf = std::get_if<Leaf>(node)) {
+            if(is_visible(from_leaf, node_index)) {
                 out_nodes.push_back(node);
             }
         }
 
-        throw qf::logic_error("invalid variant state of BNode::data");
+        throw qf::logic_error("invalid variant state of Node::data");
+    }
+}
+
+void Level::enumerate_internal(std::int32_t node_index, const Eigen::Vector3f& position, std::vector<const Node*>& out_nodes) const
+{
+    assert(position.allFinite());
+
+    if(node_index >= 0 && node_index < m_nodes.size()) {
+        const auto node = &m_nodes[node_index];
+
+        if(const auto internal = std::get_if<Internal>(node)) {
+            auto distance = internal->plane.signedDistance(position);
+
+            if(distance >= 0.0f) {
+                enumerate_internal(internal->back, position, out_nodes);
+                out_nodes.push_back(node);
+                enumerate_internal(internal->front, position, out_nodes);
+            }
+            else {
+                enumerate_internal(internal->front, position, out_nodes);
+                out_nodes.push_back(node);
+                enumerate_internal(internal->back, position, out_nodes);
+            }
+        }
+        else {
+            out_nodes.push_back(node);
+        }
     }
 }
 
 void Level::read_lump_bsp(ReadBuffer& buffer)
 {
     auto nodecnt = buffer.read<std::uint32_t>();
+    auto rootnode = buffer.read<std::int32_t>();
 
-    std::vector<ProtoBNode> protonodes;
-    protonodes.reserve(nodecnt);
+    m_nodes.clear();
+    m_nodes.reserve(nodecnt);
 
     qf::throw_if<std::runtime_error>(nodecnt == 0, "empty geometry lump");
     qf::throw_if<std::runtime_error>(buffer.is_ended(), "unexpected end-of-file");
@@ -366,66 +385,45 @@ void Level::read_lump_bsp(ReadBuffer& buffer)
     for(std::uint32_t i = 0; i < nodecnt; ++i) {
         qf::throw_if<std::runtime_error>(buffer.is_ended(), "unexpected end-of-file");
 
-        ProtoBNode protonode;
-        protonode.plane_coefs[0] = buffer.read<float>();
-        protonode.plane_coefs[1] = buffer.read<float>();
-        protonode.plane_coefs[1] = buffer.read<float>();
-        protonode.plane_coefs[2] = buffer.read<float>();
-        protonode.leaf_index = buffer.read<std::int32_t>();
-        protonode.front = buffer.read<std::int32_t>();
-        protonode.back = buffer.read<std::int32_t>();
-        protonode.material = buffer.read<std::string>();
-        protonode.ebo_offset = buffer.read<std::int32_t>();
-        protonode.ebo_count = buffer.read<std::int32_t>();
+        auto plane_i = buffer.read<float>();
+        auto plane_j = buffer.read<float>();
+        auto plane_k = buffer.read<float>();
+        auto plane_d = buffer.read<float>();
+        auto leaf_index = buffer.read<std::int32_t>();
+        auto front_index = buffer.read<std::int32_t>();
+        auto back_index = buffer.read<std::int32_t>();
+        auto material_index = buffer.read<std::int32_t>();
+        auto ebo_offset = buffer.read<std::int32_t>();
+        auto ebo_count = buffer.read<std::int32_t>();
 
-        protonodes.emplace_back(std::move(protonode));
-    }
+        if(leaf_index >= 0) {
+            Leaf leaf;
+            leaf.material = material_index;
+            leaf.ebo_offset = ebo_offset;
+            leaf.ebo_count = ebo_count;
 
-    std::vector<std::shared_ptr<BNode>> nodes;
-    nodes.reserve(nodecnt);
-
-    for(std::uint32_t i = 0; i < nodecnt; ++i) {
-        auto node = std::make_shared<BNode>();
-        auto& protonode = protonodes[i];
-
-        if(protonode.leaf_index > 0) {
-            BNode::Leaf leaf;
-            leaf.index = protonode.leaf_index;
-            leaf.ebo_offset = protonode.ebo_offset;
-            leaf.ebo_count = protonode.ebo_count;
-            leaf.material = protonode.material;
-
-            node->data = std::move(leaf);
+            m_nodes.emplace_back(std::move(leaf));
         }
         else {
-            BNode::Internal internal;
-            internal.plane = Eigen::Hyperplane<float, 3>(Eigen::Map<Eigen::Vector3f>(&protonode.plane_coefs[0]), protonode.plane_coefs[3]);
-            internal.front = nullptr;
-            internal.back = nullptr;
+            Internal internal;
+            internal.plane = Eigen::Hyperplane<float, 3>(Eigen::Vector3f(plane_i, plane_j, plane_k), plane_d);
+            internal.front = front_index;
+            internal.back = back_index;
 
-            node->data = internal;
-        }
-
-        nodes.emplace_back(std::move(node));
-    }
-
-    for(std::uint32_t i = 0; i < nodecnt; ++i) {
-        auto& node = nodes[i];
-        auto& protonode = protonodes[i];
-
-        if(auto internal = std::get_if<BNode::Internal>(&node->data)) {
-            auto front_index = protonode.front;
-            auto back_index = protonode.back;
-
-            qf::throw_if<std::runtime_error>(front_index < 0 || front_index >= nodes.size(), "invalid front child index");
-            qf::throw_if<std::runtime_error>(back_index < 0 || back_index >= nodes.size(), "invalid back child index");
-
-            internal->front = nodes[front_index];
-            internal->back = nodes[back_index];
+            m_nodes.emplace_back(std::move(internal));
         }
     }
 
-    m_root = nodes[0];
+    qf::throw_if<std::runtime_error>(rootnode < 0 || rootnode >= m_nodes.size(), "invalid root node index");
+
+    for(std::uint32_t i = 0; i < m_nodes.size(); ++i) {
+        const auto node = &m_nodes[i];
+
+        if(const auto internal = std::get_if<Internal>(node)) {
+            qf::throw_if<std::runtime_error>(internal->front >= m_nodes.size(), "invalid front node index");
+            qf::throw_if<std::runtime_error>(internal->back >= m_nodes.size(), "invalid back node index");
+        }
+    }
 }
 
 void Level::read_lump_pvs(ReadBuffer& buffer)
@@ -457,6 +455,19 @@ void Level::read_lump_pvs(ReadBuffer& buffer)
 
 void Level::read_lump_mat(ReadBuffer& buffer)
 {
+    auto materialcnt = buffer.read<std::uint32_t>();
+
+    qf::throw_if<std::runtime_error>(materialcnt == 0, "empty material lump");
+    qf::throw_if<std::runtime_error>(buffer.is_ended(), "unexpected end-of-file");
+
+    m_materials.clear();
+    m_materials.reserve(materialcnt);
+
+    for(std::uint32_t i = 0; i < materialcnt; ++i) {
+        qf::throw_if<std::runtime_error>(buffer.is_ended(), "unexpected end-of-file");
+
+        m_materials.emplace_back(buffer.read<std::string>());
+    }
 }
 
 void Level::read_lump_ent(ReadBuffer& buffer)
@@ -550,38 +561,36 @@ void Level::read_lump_vtx(ReadBuffer& buffer)
 
 void Level::write_lump_bsp(WriteBuffer& buffer) const
 {
-    std::vector<const BNode*> nodes;
-    std::unordered_map<const BNode*, std::int32_t> indices;
-    flatten_bsp(nodes, indices);
+    buffer.write<std::uint32_t>(static_cast<std::uint32_t>(m_nodes.size()));
 
-    buffer.write<std::uint32_t>(static_cast<std::uint32_t>(nodes.size()));
+    for(std::int32_t i = 0; i < m_nodes.size(); ++i) {
+        const auto node = &m_nodes[i];
 
-    for(const auto node : nodes) {
-        if(const auto leaf = std::get_if<BNode::Leaf>(&node->data)) {
+        if(const auto leaf = std::get_if<Leaf>(node)) {
             buffer.write<float>(std::numeric_limits<float>::quiet_NaN());
             buffer.write<float>(std::numeric_limits<float>::quiet_NaN());
             buffer.write<float>(std::numeric_limits<float>::quiet_NaN());
             buffer.write<float>(std::numeric_limits<float>::quiet_NaN());
 
-            buffer.write<std::int32_t>(leaf->index);
+            buffer.write<std::int32_t>(i);
             buffer.write<std::int32_t>(-1);
             buffer.write<std::int32_t>(-1);
 
-            buffer.write<std::string_view>(leaf->material);
+            buffer.write<std::int32_t>(leaf->material);
             buffer.write<std::int32_t>(leaf->ebo_offset);
             buffer.write<std::int32_t>(leaf->ebo_count);
         }
-        else if(const auto internal = std::get_if<BNode::Internal>(&node->data)) {
+        else if(const auto internal = std::get_if<Internal>(node)) {
             buffer.write<float>(internal->plane.coeffs()[0]);
             buffer.write<float>(internal->plane.coeffs()[1]);
             buffer.write<float>(internal->plane.coeffs()[2]);
             buffer.write<float>(internal->plane.coeffs()[3]);
 
             buffer.write<std::int32_t>(-1);
-            buffer.write<std::int32_t>(internal->front ? indices.at(internal->front.get()) : -1);
-            buffer.write<std::int32_t>(internal->back ? indices.at(internal->back.get()) : -1);
+            buffer.write<std::int32_t>(internal->front);
+            buffer.write<std::int32_t>(internal->back);
 
-            buffer.write<std::string_view>(std::string_view());
+            buffer.write<std::int32_t>(-1);
             buffer.write<std::int32_t>(-1);
             buffer.write<std::int32_t>(-1);
         }
@@ -608,6 +617,11 @@ void Level::write_lump_pvs(WriteBuffer& buffer) const
 
 void Level::write_lump_mat(WriteBuffer& buffer) const
 {
+    buffer.write<std::uint32_t>(static_cast<std::uint32_t>(m_materials.size()));
+
+    for(const auto& material : m_materials) {
+        buffer.write<std::string_view>(material);
+    }
 }
 
 void Level::write_lump_ent(WriteBuffer& buffer) const
