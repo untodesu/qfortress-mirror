@@ -19,16 +19,17 @@ constexpr static std::uint32_t QFLV_VERSION = 1;
 
 constexpr static std::uint32_t LUMP_BSP = 1; ///< Geometry nodes
 constexpr static std::uint32_t LUMP_PVS = 2; ///< Potentially visible set
-constexpr static std::uint32_t LUMP_ENT = 3; ///< Entity data as a JSON string
-constexpr static std::uint32_t LUMP_RAD = 4; ///< Lightmaps
-constexpr static std::uint32_t LUMP_VTX = 5; ///< Vertex and index buffer
+constexpr static std::uint32_t LUMP_MAT = 3; ///< Materials string table
+constexpr static std::uint32_t LUMP_ENT = 4; ///< Entity data as a JSON string
+constexpr static std::uint32_t LUMP_RAD = 5; ///< Lightmaps
+constexpr static std::uint32_t LUMP_VTX = 6; ///< Vertex and index buffer
 
 struct ProtoBNode final {
     float plane_coefs[4];
     std::int32_t leaf_index { -1 };
     std::int32_t front { -1 };
     std::int32_t back { -1 };
-    std::string material;
+    std::int32_t material { -1 };
     std::int32_t ebo_offset { -1 };
     std::int32_t ebo_count { -1 };
 };
@@ -39,23 +40,28 @@ void Level::set_geometry(std::vector<std::uint32_t> new_indices, std::vector<Lev
     m_vertices = std::move(new_vertices);
 }
 
-const BNode* Level::root(void) const noexcept
+void Level::set_nodes(std::vector<BNode> new_nodes, std::int32_t new_root) noexcept
 {
-    return m_root.get();
+    m_nodes = std::move(new_nodes);
+    m_root_node = new_root;
 }
 
-void Level::set_root(std::shared_ptr<BNode> new_root) noexcept
+void Level::set_materials(std::vector<std::string> new_materials) noexcept
 {
-    m_root = new_root;
+    m_materials = std::move(new_materials);
 }
 
 void Level::purge(void) noexcept
 {
     m_registry.clear();
-    m_root.reset();
+
+    m_nodes.clear();
+    m_materials.clear();
     m_pvs.clear();
     m_indices.clear();
     m_vertices.clear();
+
+    m_root_node = -1;
 }
 
 void Level::load(std::string_view path)
@@ -158,7 +164,7 @@ void Level::save(std::string_view path) const
 
     std::uint32_t lumpcnt = 0;
 
-    if(m_root) {
+    if(m_nodes) {
         lumpcnt += 1; // LUMP_BSP
     }
 
@@ -449,6 +455,10 @@ void Level::read_lump_pvs(ReadBuffer& buffer)
     qf::throw_if_not<std::runtime_error>(nodecnt == m_pvs.size(), "PVS size mismatch");
 }
 
+void Level::read_lump_mat(ReadBuffer& buffer)
+{
+}
+
 void Level::read_lump_ent(ReadBuffer& buffer)
 {
     std::string source;
@@ -594,6 +604,10 @@ void Level::write_lump_pvs(WriteBuffer& buffer) const
             }
         }
     }
+}
+
+void Level::write_lump_mat(WriteBuffer& buffer) const
+{
 }
 
 void Level::write_lump_ent(WriteBuffer& buffer) const

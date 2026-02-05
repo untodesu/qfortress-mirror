@@ -2,6 +2,7 @@
 
 #include "core/level/bnode.hh"
 
+#if 0
 void BNode::enumerate(BNode* node, const Eigen::Vector3f& position, std::vector<BNode*>& out_nodes)
 {
     if(node) {
@@ -47,3 +48,4 @@ void BNode::enumerate(const BNode* node, const Eigen::Vector3f& position, std::v
         }
     }
 }
+#endif
