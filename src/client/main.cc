@@ -6,7 +6,6 @@
 #include "core/entity/transform.hh"
 #include "core/exceptions.hh"
 #include "core/level/level.hh"
-#include "core/level/loader.hh"
 #include "core/utils/epoch.hh"
 #include "core/version.hh"
 
@@ -53,25 +52,24 @@ void client::main(void)
     Transform::register_component();
     CurrentLeaf::register_component();
 
-    level::purge();
+    Level test_write;
+    auto& test_write_r = test_write.registry();
+    auto test_write_ent = test_write_r.create();
+    test_write_r.emplace_or_replace<Transform>(test_write_ent, Transform({ 123.0f, 456.0f, 789.0f }, Eigen::Quaternionf::Identity()));
 
-    auto entity = level::registry.create();
-    level::registry.emplace_or_replace<Transform>(entity, Transform({ 123.0f, 456.0f, 789.0f }, Eigen::Quaternionf::Identity()));
+    test_write.save("testlevel.bsp");
+    test_write.purge();
 
-    level::save("testlevel.bsp");
+    Level test_read;
+    test_read.load("testlevel.bsp");
 
-    level::purge();
-
-    level::load("testlevel.bsp");
-
-    entity = level::registry.view<entt::entity>().front();
-
-    auto& transform = level::registry.get<Transform>(entity);
-    auto position = transform.position();
-    auto forward = transform.forward_vector();
-
-    LOG_INFO("pos {} {} {}", position.x(), position.y(), position.z());
-    LOG_INFO("fwd {} {} {}", forward.x(), forward.y(), forward.z());
+    auto& test_read_r = test_read.registry();
+    auto test_read_ent = test_read_r.view<entt::entity>().front();
+    auto& test_read_transform = test_read_r.get<Transform>(test_read_ent);
+    Eigen::Vector3f test_read_pos(test_read_transform.position());
+    Eigen::Vector3f test_read_ijk(test_read_transform.forward_vector());
+    LOG_INFO("pos {} {} {}", test_read_pos.x(), test_read_pos.y(), test_read_pos.z());
+    LOG_INFO("fwd {} {} {}", test_read_ijk.x(), test_read_ijk.y(), test_read_ijk.z());
 
     s_is_running.store(true);
 

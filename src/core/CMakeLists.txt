@@ -18,8 +18,6 @@ add_library(core STATIC
     "${CMAKE_CURRENT_LIST_DIR}/level/bnode.hh"
     "${CMAKE_CURRENT_LIST_DIR}/level/level.cc"
     "${CMAKE_CURRENT_LIST_DIR}/level/level.hh"
-    "${CMAKE_CURRENT_LIST_DIR}/level/loader.cc"
-    "${CMAKE_CURRENT_LIST_DIR}/level/loader.hh"
     "${CMAKE_CURRENT_LIST_DIR}/level/vertex.hh"
     "${CMAKE_CURRENT_LIST_DIR}/res/image.cc"
     "${CMAKE_CURRENT_LIST_DIR}/res/image.hh"

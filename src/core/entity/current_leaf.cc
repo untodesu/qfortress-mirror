@@ -33,12 +33,14 @@ void CurrentLeaf::register_component(void)
     components::register_component("current_leaf", &serialize_current_leaf, &deserialize_current_leaf);
 }
 
-void CurrentLeaf::fixed_update(void)
+void CurrentLeaf::fixed_update(Level& level)
 {
-    auto view = level::registry.view<Transform>();
+    auto& registry = level.registry();
+
+    auto view = registry.view<Transform>();
 
     for(auto [entity, transform] : view.each()) {
-        level::registry.emplace_or_replace<CurrentLeaf>(entity, level::find_leaf_index(transform.position()));
+        registry.emplace_or_replace<CurrentLeaf>(entity, level.find_leaf_index(transform.position()));
     }
 }
 
