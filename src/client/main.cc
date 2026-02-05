@@ -60,6 +60,19 @@ void client::main(void)
 
     level::save("testlevel.bsp");
 
+    level::purge();
+
+    level::load("testlevel.bsp");
+
+    entity = level::registry.view<entt::entity>().front();
+
+    auto& transform = level::registry.get<Transform>(entity);
+    auto position = transform.position();
+    auto forward = transform.forward_vector();
+
+    LOG_INFO("pos {} {} {}", position.x(), position.y(), position.z());
+    LOG_INFO("fwd {} {} {}", forward.x(), forward.y(), forward.z());
+
     s_is_running.store(true);
 
     globals::curtime_us = utils::epoch_microseconds();

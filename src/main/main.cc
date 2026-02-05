@@ -120,6 +120,13 @@ static void handle_exception(const std::exception* ex)
 #endif
 }
 
+#ifndef NDEBUG
+int main(int argc, char** argv)
+{
+    wrapped_main(argc, argv);
+    return EXIT_SUCCESS;
+}
+#else
 int main(int argc, char** argv)
 {
     try {
@@ -135,3 +142,4 @@ int main(int argc, char** argv)
         return EXIT_FAILURE;
     }
 }
+#endif

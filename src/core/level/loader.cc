@@ -384,7 +384,7 @@ void level::load(std::string_view path)
 
     qf::throw_if<std::runtime_error>(buffer.is_ended(), "unexpected end-of-file");
     qf::throw_if_not<std::runtime_error>(version == QFLV_VERSION, "unsupported file version");
-    qf::throw_if_not<std::runtime_error>(lumpcnt > 1, "no lumps present");
+    qf::throw_if_not<std::runtime_error>(lumpcnt > 0, "no lumps present");
 
     level::purge();
 
