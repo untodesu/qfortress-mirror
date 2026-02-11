@@ -21,7 +21,7 @@ static int stbi_physfs_eof(void* context)
     return PHYSFS_eof(reinterpret_cast<PHYSFS_File*>(context));
 }
 
-static const void* image_load_fn(const char* name, unsigned int flags)
+static const void* image_load_fn(const char* name, std::uint32_t flags)
 {
     assert(name);
 

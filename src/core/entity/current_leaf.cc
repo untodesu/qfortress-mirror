@@ -25,7 +25,7 @@ static void deserialize_current_leaf(entt::registry& registry, entt::entity enti
     auto leaf_index = json_value_get_number(jsonv);
     assert(std::isfinite(leaf_index));
 
-    registry.emplace_or_replace<CurrentLeaf>(entity, static_cast<int>(leaf_index));
+    registry.emplace_or_replace<CurrentLeaf>(entity, static_cast<std::int32_t>(leaf_index));
 }
 
 void CurrentLeaf::register_component(void)
@@ -44,7 +44,7 @@ void CurrentLeaf::fixed_update(Level& level)
     }
 }
 
-CurrentLeaf::CurrentLeaf(int leaf_index) : m_leaf_index(leaf_index)
+CurrentLeaf::CurrentLeaf(std::int32_t leaf_index) : m_leaf_index(leaf_index)
 {
     // empty
 }

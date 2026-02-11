@@ -30,6 +30,7 @@ if(WIN32 AND TARGET SDL3::SDL3)
     if(SDL3_DLL_LOCATION AND EXISTS "${SDL3_DLL_LOCATION}")
         add_custom_target(external_SDL3_DLL
             COMMAND ${CMAKE_COMMAND} -E copy_if_different "${SDL3_DLL_LOCATION}" "${PROJECT_BINARY_DIR}"
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different "${SDL3_DLL_LOCATION}" "${PROJECT_SOURCE_DIR}"
             COMMENT "Copying SDL3 DLL" VERBATIM)
         add_dependencies(external_SDL3 external_SDL3_DLL)
     endif()

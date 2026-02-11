@@ -10,21 +10,21 @@ public:
 
     static void fixed_update(Level& level);
 
-    explicit CurrentLeaf(int leaf_index);
+    explicit CurrentLeaf(std::int32_t leaf_index);
 
-    constexpr operator int(void) const noexcept;
-    constexpr int leaf_index(void) const noexcept;
+    constexpr operator std::int32_t(void) const noexcept;
+    constexpr std::int32_t leaf_index(void) const noexcept;
 
 private:
-    int m_leaf_index;
+    std::int32_t m_leaf_index;
 };
 
-constexpr CurrentLeaf::operator int(void) const noexcept
+constexpr CurrentLeaf::operator std::int32_t(void) const noexcept
 {
     return m_leaf_index;
 }
 
-constexpr int CurrentLeaf::leaf_index(void) const noexcept
+constexpr std::int32_t CurrentLeaf::leaf_index(void) const noexcept
 {
     return m_leaf_index;
 }

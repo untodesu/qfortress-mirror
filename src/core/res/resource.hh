@@ -2,7 +2,8 @@
 #define CORE_RES_RESOURCE_HH
 #pragma once
 
-constexpr static unsigned int RESFLAG_CACHE = 1 << 0; ///< Cache the resource after loading
+constexpr static std::uint32_t RESFLAG_CACHE = 1 << 0;      ///< Cache the resource after loading
+constexpr static std::uint32_t RESFLAG_CUSTOM = 0xFFFFFF00; ///< Mask of custom resource flags/data
 
 namespace res
 {
@@ -12,7 +13,7 @@ using handle = std::shared_ptr<const T>;
 
 namespace res
 {
-using load_func = const void* (*)(const char* name, unsigned int flags);
+using load_func = const void* (*)(const char* name, std::uint32_t flags);
 using free_func = void (*)(const void* resource);
 } // namespace res
 
