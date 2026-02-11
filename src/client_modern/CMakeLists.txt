@@ -3,6 +3,8 @@ find_program(GLSLANG_VALIDATOR glslangValidator REQUIRED)
 add_library(client_modern STATIC
     "${CMAKE_CURRENT_LIST_DIR}/utils/shader.hh"
     "${CMAKE_CURRENT_LIST_DIR}/utils/shader.cc"
+    "${CMAKE_CURRENT_LIST_DIR}/experimental.hh"
+    "${CMAKE_CURRENT_LIST_DIR}/experimental.cc"
     "${CMAKE_CURRENT_LIST_DIR}/globals.hh"
     "${CMAKE_CURRENT_LIST_DIR}/globals.cc"
     "${CMAKE_CURRENT_LIST_DIR}/pch.hh"

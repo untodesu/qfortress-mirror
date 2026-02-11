@@ -7,6 +7,8 @@
 namespace globals
 {
 extern SDL_GPUDevice* gpu_device;
+extern SDL_GPUTexture* gpu_swapchain;
+extern SDL_GPURenderPass* gpu_render_pass;
 } // namespace globals
 
 #endif

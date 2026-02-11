@@ -94,6 +94,8 @@ void client::main(void)
 
         handle_events();
 
+        render::update();
+
         render::begin_frame();
 
         render::render_world();
@@ -101,6 +103,8 @@ void client::main(void)
         render::render_imgui();
 
         render::end_frame();
+
+        render::update_late();
 
         globals::client_framecount += 1;
     }

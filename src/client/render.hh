@@ -21,6 +21,11 @@ void render_imgui(void);
 
 namespace render
 {
+void request_vsync(bool vsync);
+} // namespace render
+
+namespace render
+{
 SDL_WindowFlags window_flags(void);
 } // namespace render
 
