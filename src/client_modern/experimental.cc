@@ -6,7 +6,6 @@
 
 #include "client_modern/globals.hh"
 #include "client_modern/utils/buffer.hh"
-#include "client_modern/utils/shader.hh"
 
 extern const std::uint8_t spirv_experimental_vert[];
 extern const std::size_t spirv_experimental_vert_size;
@@ -30,8 +29,25 @@ void experimental::init(void)
 
 void experimental::init_late(void)
 {
-    auto vert = utils::create_shader(spirv_experimental_vert, spirv_experimental_vert_size, SDL_GPU_SHADERSTAGE_VERTEX);
-    auto frag = utils::create_shader(spirv_experimental_frag, spirv_experimental_frag_size, SDL_GPU_SHADERSTAGE_FRAGMENT);
+    SDL_GPUShaderCreateInfo vert_info {};
+    vert_info.code_size = spirv_experimental_vert_size;
+    vert_info.code = reinterpret_cast<const Uint8*>(spirv_experimental_vert);
+    vert_info.entrypoint = "main";
+    vert_info.format = SDL_GPU_SHADERFORMAT_SPIRV;
+    vert_info.stage = SDL_GPU_SHADERSTAGE_VERTEX;
+
+    SDL_GPUShaderCreateInfo frag_info {};
+    frag_info.code_size = spirv_experimental_frag_size;
+    frag_info.code = reinterpret_cast<const Uint8*>(spirv_experimental_frag);
+    frag_info.entrypoint = "main";
+    frag_info.format = SDL_GPU_SHADERFORMAT_SPIRV;
+    frag_info.stage = SDL_GPU_SHADERSTAGE_FRAGMENT;
+
+    auto vert = SDL_CreateGPUShader(globals::gpu_device, &vert_info);
+    qf::throw_if_not_fmt<std::runtime_error>(vert, "SDL_CreateGPUShader (vert) failed: {}", SDL_GetError());
+
+    auto frag = SDL_CreateGPUShader(globals::gpu_device, &frag_info);
+    qf::throw_if_not_fmt<std::runtime_error>(frag, "SDL_CreateGPUShader (frag) failed: {}", SDL_GetError());
 
     std::vector<Vertex> vertices;
     vertices.push_back({ Eigen::Vector3f(-0.5f, -0.5f, 0.0f), Eigen::Vector2f(0.0f, 0.0f) });
@@ -47,9 +63,22 @@ void experimental::init_late(void)
     indices.push_back(3);
     indices.push_back(0);
 
-    // Upload geometry into VRAM
-    s_vbo = utils::initialize_buffer(vertices.data(), vertices.size() * sizeof(Vertex), SDL_GPU_BUFFERUSAGE_VERTEX);
-    s_ibo = utils::initialize_buffer(indices.data(), indices.size() * sizeof(std::uint32_t), SDL_GPU_BUFFERUSAGE_INDEX);
+    SDL_GPUBufferCreateInfo vbo_info {};
+    vbo_info.size = static_cast<Uint32>(vertices.size() * sizeof(Vertex));
+    vbo_info.usage = SDL_GPU_BUFFERUSAGE_VERTEX;
+
+    SDL_GPUBufferCreateInfo ibo_info {};
+    ibo_info.size = static_cast<Uint32>(indices.size() * sizeof(std::uint32_t));
+    ibo_info.usage = SDL_GPU_BUFFERUSAGE_INDEX;
+
+    s_vbo = SDL_CreateGPUBuffer(globals::gpu_device, &vbo_info);
+    qf::throw_if_not_fmt<std::runtime_error>(s_vbo, "SDL_CreateGPUBuffer (VBO) failed: {}", SDL_GetError());
+
+    s_ibo = SDL_CreateGPUBuffer(globals::gpu_device, &ibo_info);
+    qf::throw_if_not_fmt<std::runtime_error>(s_ibo, "SDL_CreateGPUBuffer (IBO) failed: {}", SDL_GetError());
+
+    utils::buffer_upload_wait(s_vbo, vertices.data(), vertices.size() * sizeof(Vertex), 0);
+    utils::buffer_upload_wait(s_ibo, indices.data(), indices.size() * sizeof(std::uint32_t), 0);
 
     SDL_GPUColorTargetDescription color_target_desc {};
     color_target_desc.format = SDL_GetGPUSwapchainTextureFormat(globals::gpu_device, globals::window);

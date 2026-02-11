@@ -6,39 +6,12 @@
 
 #include "client_modern/globals.hh"
 
-SDL_GPUBuffer* utils::create_buffer(std::size_t size, SDL_GPUBufferUsageFlags usage)
-{
-    assert(size);
-    assert(globals::gpu_device);
-
-    SDL_GPUBufferCreateInfo buffer_info {};
-    buffer_info.size = static_cast<Uint32>(size);
-    buffer_info.usage = usage;
-
-    auto buffer = SDL_CreateGPUBuffer(globals::gpu_device, &buffer_info);
-    qf::throw_if_not_fmt<std::runtime_error>(buffer, "SDL_CreateGPUBuffer failed: {}", SDL_GetError());
-
-    return buffer;
-}
-
-SDL_GPUBuffer* utils::initialize_buffer(const void* data, std::size_t size, SDL_GPUBufferUsageFlags usage)
-{
-    assert(data);
-    assert(size);
-    assert(globals::gpu_device);
-
-    auto buffer = utils::create_buffer(size, usage);
-
-    utils::fill_buffer_blocking(buffer, data, size);
-
-    return buffer;
-}
-
-void utils::fill_buffer_blocking(SDL_GPUBuffer* buffer, const void* data, std::size_t size, std::size_t offset)
+void utils::buffer_upload_wait(SDL_GPUBuffer* buffer, const void* data, std::size_t size, std::size_t offset)
 {
     assert(buffer);
     assert(data);
     assert(size);
+
     assert(globals::gpu_device);
 
     SDL_GPUTransferBufferCreateInfo transfer_info {};
