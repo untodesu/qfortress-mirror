@@ -98,9 +98,9 @@ void client::main(void)
 
         render::begin_frame();
 
-        render::render_world();
+        render::render();
 
-        render::render_imgui();
+        render::layout();
 
         render::end_frame();
 

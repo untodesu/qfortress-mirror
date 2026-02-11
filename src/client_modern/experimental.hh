@@ -7,8 +7,7 @@ namespace experimental
 void init(void);
 void init_late(void);
 void shutdown(void);
-void render_world(void);
-void render_imgui(void);
+void render(SDL_GPURenderPass* render_pass);
 } // namespace experimental
 
 #endif

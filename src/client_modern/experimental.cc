@@ -5,15 +5,23 @@
 #include "core/exceptions.hh"
 
 #include "client_modern/globals.hh"
+#include "client_modern/utils/buffer.hh"
 #include "client_modern/utils/shader.hh"
 
-extern const std::uint8_t spirv_triangle_vert[];
-extern const std::size_t spirv_triangle_vert_size;
+extern const std::uint8_t spirv_experimental_vert[];
+extern const std::size_t spirv_experimental_vert_size;
 
-extern const std::uint8_t spirv_triangle_frag[];
-extern const std::size_t spirv_triangle_frag_size;
+extern const std::uint8_t spirv_experimental_frag[];
+extern const std::size_t spirv_experimental_frag_size;
 
 static SDL_GPUGraphicsPipeline* s_pipeline;
+static SDL_GPUBuffer* s_vbo;
+static SDL_GPUBuffer* s_ibo;
+
+struct Vertex final {
+    Eigen::Vector3f position;
+    Eigen::Vector2f texcoord;
+};
 
 void experimental::init(void)
 {
@@ -22,25 +30,67 @@ void experimental::init(void)
 
 void experimental::init_late(void)
 {
-    auto vert = utils::create_shader(spirv_triangle_vert, spirv_triangle_vert_size, SDL_GPU_SHADERSTAGE_VERTEX);
-    auto frag = utils::create_shader(spirv_triangle_frag, spirv_triangle_frag_size, SDL_GPU_SHADERSTAGE_FRAGMENT);
+    auto vert = utils::create_shader(spirv_experimental_vert, spirv_experimental_vert_size, SDL_GPU_SHADERSTAGE_VERTEX);
+    auto frag = utils::create_shader(spirv_experimental_frag, spirv_experimental_frag_size, SDL_GPU_SHADERSTAGE_FRAGMENT);
+
+    std::vector<Vertex> vertices;
+    vertices.push_back({ Eigen::Vector3f(-0.5f, -0.5f, 0.0f), Eigen::Vector2f(0.0f, 0.0f) });
+    vertices.push_back({ Eigen::Vector3f(-0.5f, +0.5f, 0.0f), Eigen::Vector2f(0.0f, 1.0f) });
+    vertices.push_back({ Eigen::Vector3f(+0.5f, +0.5f, 0.0f), Eigen::Vector2f(1.0f, 1.0f) });
+    vertices.push_back({ Eigen::Vector3f(+0.5f, -0.5f, 0.0f), Eigen::Vector2f(1.0f, 0.0f) });
+
+    std::vector<std::uint32_t> indices;
+    indices.push_back(0);
+    indices.push_back(1);
+    indices.push_back(2);
+    indices.push_back(2);
+    indices.push_back(3);
+    indices.push_back(0);
+
+    // Upload geometry into VRAM
+    s_vbo = utils::initialize_buffer(vertices.data(), vertices.size() * sizeof(Vertex), SDL_GPU_BUFFERUSAGE_VERTEX);
+    s_ibo = utils::initialize_buffer(indices.data(), indices.size() * sizeof(std::uint32_t), SDL_GPU_BUFFERUSAGE_INDEX);
 
     SDL_GPUColorTargetDescription color_target_desc {};
     color_target_desc.format = SDL_GetGPUSwapchainTextureFormat(globals::gpu_device, globals::window);
 
     SDL_GPUGraphicsPipelineCreateInfo pipeline_info {};
-
     pipeline_info.target_info.num_color_targets = 1;
     pipeline_info.target_info.color_target_descriptions = &color_target_desc;
 
-    pipeline_info.target_info.has_depth_stencil_target = false;
+    SDL_GPUVertexBufferDescription vertex_buffer_desc {};
+    vertex_buffer_desc.slot = 0;
+    vertex_buffer_desc.pitch = static_cast<Uint32>(sizeof(Vertex));
+    vertex_buffer_desc.input_rate = SDL_GPU_VERTEXINPUTRATE_VERTEX;
+    vertex_buffer_desc.instance_step_rate = 0;
+
+    SDL_GPUVertexAttribute attr_position {};
+    attr_position.location = 0;
+    attr_position.buffer_slot = 0;
+    attr_position.format = SDL_GPU_VERTEXELEMENTFORMAT_FLOAT3;
+    attr_position.offset = offsetof(Vertex, position);
+
+    SDL_GPUVertexAttribute attr_texcoord {};
+    attr_texcoord.location = 1;
+    attr_texcoord.buffer_slot = 0;
+    attr_texcoord.format = SDL_GPU_VERTEXELEMENTFORMAT_FLOAT2;
+    attr_texcoord.offset = offsetof(Vertex, texcoord);
+
+    std::vector<SDL_GPUVertexAttribute> vertex_attributes;
+    vertex_attributes.emplace_back(std::move(attr_position));
+    vertex_attributes.emplace_back(std::move(attr_texcoord));
+
+    pipeline_info.vertex_input_state.num_vertex_buffers = 1;
+    pipeline_info.vertex_input_state.vertex_buffer_descriptions = &vertex_buffer_desc;
+    pipeline_info.vertex_input_state.num_vertex_attributes = static_cast<Uint32>(vertex_attributes.size());
+    pipeline_info.vertex_input_state.vertex_attributes = vertex_attributes.data();
 
     pipeline_info.vertex_shader = vert;
     pipeline_info.fragment_shader = frag;
 
     pipeline_info.primitive_type = SDL_GPU_PRIMITIVETYPE_TRIANGLELIST;
     pipeline_info.rasterizer_state.cull_mode = SDL_GPU_CULLMODE_NONE;
-    pipeline_info.rasterizer_state.fill_mode = SDL_GPU_FILLMODE_FILL;
+    pipeline_info.rasterizer_state.fill_mode = SDL_GPU_FILLMODE_LINE;
     pipeline_info.rasterizer_state.front_face = SDL_GPU_FRONTFACE_COUNTER_CLOCKWISE;
 
     s_pipeline = SDL_CreateGPUGraphicsPipeline(globals::gpu_device, &pipeline_info);
@@ -52,16 +102,27 @@ void experimental::init_late(void)
 
 void experimental::shutdown(void)
 {
+    SDL_ReleaseGPUBuffer(globals::gpu_device, s_ibo);
+    SDL_ReleaseGPUBuffer(globals::gpu_device, s_vbo);
     SDL_ReleaseGPUGraphicsPipeline(globals::gpu_device, s_pipeline);
 }
 
-void experimental::render_world(void)
+void experimental::render(SDL_GPURenderPass* render_pass)
 {
-    SDL_BindGPUGraphicsPipeline(globals::gpu_render_pass, s_pipeline);
-    SDL_DrawGPUPrimitives(globals::gpu_render_pass, 3, 1, 0, 0);
-}
+    assert(render_pass);
 
-void experimental::render_imgui(void)
-{
-    // empty
+    SDL_BindGPUGraphicsPipeline(render_pass, s_pipeline);
+
+    SDL_GPUBufferBinding vbo_binding {};
+    vbo_binding.buffer = s_vbo;
+    vbo_binding.offset = 0;
+
+    SDL_GPUBufferBinding ibo_binding {};
+    ibo_binding.buffer = s_ibo;
+    ibo_binding.offset = 0;
+
+    SDL_BindGPUVertexBuffers(render_pass, 0, &vbo_binding, 1);
+    SDL_BindGPUIndexBuffer(render_pass, &ibo_binding, SDL_GPU_INDEXELEMENTSIZE_32BIT);
+
+    SDL_DrawGPUIndexedPrimitives(render_pass, 6, 1, 0, 0, 0);
 }

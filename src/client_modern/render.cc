@@ -8,8 +8,8 @@
 #include "client_modern/experimental.hh"
 #include "client_modern/globals.hh"
 
-static SDL_GPUPresentMode s_present_mode_vsync;
 static SDL_GPUCommandBuffer* s_command_buffer;
+static SDL_GPURenderPass* s_render_pass;
 
 void render::init(void)
 {
@@ -20,15 +20,6 @@ void render::init(void)
 
     auto window_claimed = SDL_ClaimWindowForGPUDevice(globals::gpu_device, globals::window);
     qf::throw_if_not_fmt<std::runtime_error>(window_claimed, "SDL_ClaimWindowForGPUDevice failed: {}", SDL_GetError());
-
-    if(SDL_WindowSupportsGPUPresentMode(globals::gpu_device, globals::window, SDL_GPU_PRESENTMODE_MAILBOX)) {
-        s_present_mode_vsync = SDL_GPU_PRESENTMODE_MAILBOX;
-    }
-    else {
-        s_present_mode_vsync = SDL_GPU_PRESENTMODE_VSYNC;
-    }
-
-    render::request_vsync(false);
 
     experimental::init();
 }
@@ -81,30 +72,24 @@ void render::begin_frame(void)
     target_info.clear_color.b = 0.1f;
     target_info.clear_color.a = 0.0f;
 
-    globals::gpu_render_pass = SDL_BeginGPURenderPass(s_command_buffer, &target_info, 1, nullptr);
+    s_render_pass = SDL_BeginGPURenderPass(s_command_buffer, &target_info, 1, nullptr);
+    qf::throw_if_not<std::runtime_error>(s_render_pass, "SDL_BeginGPURenderPass returned null");
 }
 
 void render::end_frame(void)
 {
-    SDL_EndGPURenderPass(globals::gpu_render_pass);
+    SDL_EndGPURenderPass(s_render_pass);
     SDL_SubmitGPUCommandBuffer(s_command_buffer);
 }
 
-void render::render_world(void)
+void render::render(void)
 {
-    experimental::render_world();
+    experimental::render(s_render_pass);
 }
 
-void render::render_imgui(void)
+void render::layout(void)
 {
-    experimental::render_imgui();
-}
-
-void render::request_vsync(bool vsync)
-{
-    auto mode = vsync ? s_present_mode_vsync : SDL_GPU_PRESENTMODE_IMMEDIATE;
-    auto ok = SDL_SetGPUSwapchainParameters(globals::gpu_device, globals::window, SDL_GPU_SWAPCHAINCOMPOSITION_SDR, mode);
-    qf::throw_if_not_fmt<std::runtime_error>(ok, "SDL_SetGPUSwapchainParameters failed: {}", SDL_GetError());
+    // empty
 }
 
 SDL_WindowFlags render::window_flags(void)

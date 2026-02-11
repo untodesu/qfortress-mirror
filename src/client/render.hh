@@ -15,13 +15,8 @@ void update(void);
 void update_late(void);
 void begin_frame(void);
 void end_frame(void);
-void render_world(void);
-void render_imgui(void);
-} // namespace render
-
-namespace render
-{
-void request_vsync(bool vsync);
+void render(void);
+void layout(void);
 } // namespace render
 
 namespace render

@@ -1,6 +1,8 @@
 find_program(GLSLANG_VALIDATOR glslangValidator REQUIRED)
 
 add_library(client_modern STATIC
+    "${CMAKE_CURRENT_LIST_DIR}/utils/buffer.hh"
+    "${CMAKE_CURRENT_LIST_DIR}/utils/buffer.cc"
     "${CMAKE_CURRENT_LIST_DIR}/utils/shader.hh"
     "${CMAKE_CURRENT_LIST_DIR}/utils/shader.cc"
     "${CMAKE_CURRENT_LIST_DIR}/experimental.hh"
@@ -41,5 +43,5 @@ function(compile_spirv_shader shader_source)
     set_source_files_properties("${shader_cxxres_path}" PROPERTIES GENERATED TRUE)
 endfunction()
 
-compile_spirv_shader("${CMAKE_CURRENT_LIST_DIR}/shaders/triangle.vert.hlsl")
-compile_spirv_shader("${CMAKE_CURRENT_LIST_DIR}/shaders/triangle.frag.hlsl")
+compile_spirv_shader("${CMAKE_CURRENT_LIST_DIR}/shaders/experimental.vert.hlsl")
+compile_spirv_shader("${CMAKE_CURRENT_LIST_DIR}/shaders/experimental.frag.hlsl")
