@@ -4,15 +4,7 @@
         {
             "name": "QFengine",
             "cppStandard": "c++20",
-            "defines": [
-                "MINIZ_NO_STDIO",
-                "MINIZ_NO_ZLIB_COMPATIBLE_NAMES",
-                "SPDLOG_USE_STD_FORMAT",
-                "NOMINMAX",
-                "QF_CLIENT_MODERN",
-                "_CRT_SECURE_NO_WARNINGS",
-                "_USE_MATH_DEFINES"
-            ],
+            "defines": ["NOMINMAX", "QF_CLIENT", "_CRT_SECURE_NO_WARNINGS", "_USE_MATH_DEFINES"],
             "includePath": [
                 "${workspaceFolder}/build/unix-debug/_deps/download_sdl3-src/include",
                 "${workspaceFolder}/build/unix-release/_deps/download_sdl3-src/include",
@@ -26,7 +18,7 @@
                 "${workspaceFolder}/external/physfs/include",
                 "${workspaceFolder}/external/stb/include",
                 "${workspaceFolder}/external/uulog/include",
-                "${workspaceFolder}/src",
+                "${workspaceFolder}",
                 "${default}"
             ]
         }

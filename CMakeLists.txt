@@ -26,9 +26,27 @@ endif()
 execute_process(COMMAND git rev-parse --short=8 HEAD WORKING_DIRECTORY ${PROJECT_SOURCE_DIR} OUTPUT_VARIABLE GIT_COMMIT OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
 execute_process(COMMAND git rev-parse --abbrev-ref HEAD WORKING_DIRECTORY ${PROJECT_SOURCE_DIR} OUTPUT_VARIABLE GIT_BRANCH OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
 
-add_subdirectory(assets)
+## Third-party dependencies
 add_subdirectory(external)
-add_subdirectory(src)
+
+## Core engine library
+add_subdirectory(core)
+
+## Add game code subdirectories
+add_subdirectory(game/client)
+add_subdirectory(game/server)
+add_subdirectory(game/shared)
+
+## Add rendering implementations
+add_subdirectory(render/compat)
+add_subdirectory(render/modern)
+
+## Game launcher
+add_subdirectory(main)
+
+## Game development tools
+add_subdirectory(tools/qfgeomp)
+add_subdirectory(tools/qflight)
 
 install(FILES "${PROJECT_SOURCE_DIR}/LICENSE" DESTINATION "doc/qfortress")
 

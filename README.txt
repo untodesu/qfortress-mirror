@@ -1,14 +1,13 @@
-    /assets/                <-- game assets in binary form
-    /external/              <-- dependencies
-    /media/                 <-- game assets in source form
-    /scripts/               <-- build utility scripts
-    /src/                   <-- source code root
-    /src/core/              <-- core game/engine functionality, math and stuff
-    /src/client/            <-- client game implementation
-    /src/client_compat/     <-- compat (OpenGL 3.3) rendering implementation
-    /src/client_modern/     <-- modern (SDL_GPU) rendering implementation
-    /src/server/            <-- server game implementation
-    /src/shared/            <-- game code shared across network
-    /src/tools/             <-- tools source code
-    /src/tools/qfgeomp/     <-- map geometry processor
-    /src/tools/qflight/     <-- map lighting processor
+    /assets/        <-- game assets
+    /core/          <-- core game/engine functionality, math and stuff
+    /external/      <-- third-party dependencies
+    /game/client/   <-- client-side game code
+    /game/server/   <-- server-side game code
+    /game/shared/   <-- shared game code
+    /main/          <-- game launcher sources
+    /render/        <-- common rendering headers
+    /render/compat/ <-- compat (OpenGL 3.3) rendering implementation
+    /render/modern/ <-- modern (SDL_GPU) rendering implementation
+    /scripts/       <-- build utility scripts
+    /tools/qfgeomp/ <-- map geometry processor
+    /tools/qflight/ <-- map lighting processor

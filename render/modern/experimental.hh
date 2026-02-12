@@ -1,0 +1,15 @@
+#ifndef RENDER_MODERN_EXPERIMENTAL_HH
+#define RENDER_MODERN_EXPERIMENTAL_HH
+#pragma once
+
+namespace experimental
+{
+void init(void);
+void init_late(void);
+void shutdown_early(void);
+void update(void);
+void update_late(void);
+void render(void);
+} // namespace experimental
+
+#endif
