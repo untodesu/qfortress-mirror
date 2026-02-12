@@ -1,37 +1,38 @@
 #include "client_modern/pch.hh"
 
-#include "client_modern/utils/basic_buffer.hh"
+#include "client_modern/utils/static_buffer.hh"
 
 #include "core/exceptions.hh"
 
 #include "client_modern/globals.hh"
 
-utils::BasicBuffer::BasicBuffer(std::size_t size, SDL_GPUBufferUsageFlags usage)
+utils::StaticBuffer::StaticBuffer(std::size_t capacity, SDL_GPUBufferUsageFlags usage) : m_capacity(capacity), m_usage(usage)
 {
-    assert(size);
+    assert(capacity);
     assert(usage);
 
     assert(globals::gpu_device);
 
     SDL_GPUBufferCreateInfo buffer_info {};
-    buffer_info.size = static_cast<Uint32>(size);
-    buffer_info.usage = usage;
+    buffer_info.size = static_cast<Uint32>(m_capacity);
+    buffer_info.usage = m_usage;
 
-    m_handle = SDL_CreateGPUBuffer(globals::gpu_device, &buffer_info);
-    qf::throw_if_not_fmt<std::runtime_error>(m_handle, "failed to create a GPU buffer: {}", SDL_GetError());
+    m_gpu_handle = SDL_CreateGPUBuffer(globals::gpu_device, &buffer_info);
+    qf::throw_if_not_fmt<std::runtime_error>(m_gpu_handle, "failed to create a GPU buffer: {}", SDL_GetError());
 }
 
-utils::BasicBuffer::~BasicBuffer(void) noexcept
+utils::StaticBuffer::~StaticBuffer(void) noexcept
 {
-    SDL_ReleaseGPUBuffer(globals::gpu_device, m_handle);
+    SDL_ReleaseGPUBuffer(globals::gpu_device, m_gpu_handle);
 }
 
-void utils::BasicBuffer::upload_wait(std::span<const std::byte> data, std::ptrdiff_t byte_offset)
+void utils::StaticBuffer::upload(std::span<const std::byte> data, std::ptrdiff_t offset)
 {
     assert(data.size_bytes());
-    assert(byte_offset >= 0);
+    assert(offset >= 0 && offset + data.size_bytes() <= m_capacity);
 
     assert(globals::gpu_device);
+    assert(m_gpu_handle);
 
     SDL_GPUTransferBufferCreateInfo transfer_info {};
     transfer_info.usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD;
@@ -58,9 +59,9 @@ void utils::BasicBuffer::upload_wait(std::span<const std::byte> data, std::ptrdi
     source.offset = 0;
 
     SDL_GPUBufferRegion destination {};
-    destination.buffer = m_handle;
-    destination.offset = static_cast<Uint32>(byte_offset);
+    destination.buffer = m_gpu_handle;
     destination.size = static_cast<Uint32>(data.size_bytes());
+    destination.offset = 0;
 
     SDL_UploadToGPUBuffer(copy_pass, &source, &destination, false);
 

@@ -6,24 +6,24 @@
 
 #include "client_modern/globals.hh"
 
-utils::StreamBuffer::StreamBuffer(std::size_t size, SDL_GPUBufferUsageFlags usage, std::size_t backing) : m_size(size), m_curframe(0)
+utils::StreamBuffer::StreamBuffer(std::size_t capacity, SDL_GPUBufferUsageFlags usage, std::size_t backing)
+    : m_capacity(capacity), m_current_frame(0), m_usage(usage)
 {
-    assert(size);
+    assert(capacity);
+    assert(usage);
     assert(backing);
 
     assert(globals::gpu_device);
 
-    m_buffers.reserve(backing);
+    m_buffers.resize(backing, nullptr);
 
     SDL_GPUBufferCreateInfo buffer_info {};
-    buffer_info.size = static_cast<Uint32>(size);
+    buffer_info.size = static_cast<Uint32>(m_capacity);
     buffer_info.usage = usage;
 
-    for(std::size_t i = 0; i < backing; ++i) {
-        auto buffer = SDL_CreateGPUBuffer(globals::gpu_device, &buffer_info);
-        qf::throw_if_not_fmt<std::runtime_error>(buffer, "failed to create a GPU buffer: {}", SDL_GetError());
-
-        m_buffers.emplace_back(std::move(buffer));
+    for(std::size_t i = 0; i < m_buffers.size(); ++i) {
+        m_buffers[i] = SDL_CreateGPUBuffer(globals::gpu_device, &buffer_info);
+        qf::throw_if_not_fmt<std::runtime_error>(m_buffers[i], "failed to create a GPU buffer: {}", SDL_GetError());
     }
 }
 
@@ -54,14 +54,14 @@ SDL_GPUBuffer* utils::StreamBuffer::upload(SDL_GPUCopyPass* copy_pass, std::span
 
     SDL_UnmapGPUTransferBuffer(globals::gpu_device, transfer_buffer);
 
-    auto device_buffer = m_buffers[m_curframe];
+    auto buffer = m_buffers[m_current_frame];
 
     SDL_GPUTransferBufferLocation source {};
     source.transfer_buffer = transfer_buffer;
     source.offset = 0;
 
     SDL_GPUBufferRegion destination {};
-    destination.buffer = device_buffer;
+    destination.buffer = buffer;
     destination.size = static_cast<Uint32>(data.size_bytes());
     destination.offset = 0;
 
@@ -69,11 +69,11 @@ SDL_GPUBuffer* utils::StreamBuffer::upload(SDL_GPUCopyPass* copy_pass, std::span
 
     SDL_ReleaseGPUTransferBuffer(globals::gpu_device, transfer_buffer);
 
-    return device_buffer;
+    return buffer;
 }
 
 void utils::StreamBuffer::update_late(void)
 {
-    m_curframe += 1;
-    m_curframe %= m_buffers.size();
+    m_current_frame += 1;
+    m_current_frame %= m_buffers.size();
 }

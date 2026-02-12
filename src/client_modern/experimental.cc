@@ -8,7 +8,7 @@
 #include "client/video.hh"
 
 #include "client_modern/globals.hh"
-#include "client_modern/utils/basic_buffer.hh"
+#include "client_modern/utils/static_buffer.hh"
 #include "client_modern/utils/stream_buffer.hh"
 
 extern const std::uint8_t spirv_experimental_vert[];
@@ -28,7 +28,7 @@ struct Uniforms final {
 
 static SDL_GPUGraphicsPipeline* s_pipeline;
 static std::unique_ptr<utils::StreamBuffer> s_vbo;
-static std::unique_ptr<utils::BasicBuffer> s_ibo;
+static std::unique_ptr<utils::StaticBuffer> s_ibo;
 
 static std::vector<Vertex> s_vertices;
 
@@ -63,13 +63,12 @@ void experimental::init_late(void)
     auto frag = SDL_CreateGPUShader(globals::gpu_device, &frag_info);
     qf::throw_if_not_fmt<std::runtime_error>(frag, "SDL_CreateGPUShader (frag) failed: {}", SDL_GetError());
 
-    s_vertices.reserve(4);
     s_vertices.push_back({ Eigen::Vector3f(-0.5f, -0.5f, 0.0f), Eigen::Vector2f(0.0f, 0.0f) });
     s_vertices.push_back({ Eigen::Vector3f(-0.5f, +0.5f, 0.0f), Eigen::Vector2f(0.0f, 1.0f) });
     s_vertices.push_back({ Eigen::Vector3f(+0.5f, +0.5f, 0.0f), Eigen::Vector2f(1.0f, 1.0f) });
     s_vertices.push_back({ Eigen::Vector3f(+0.5f, -0.5f, 0.0f), Eigen::Vector2f(1.0f, 0.0f) });
 
-    std::vector<std::uint32_t> indices;
+    std::vector<Uint32> indices;
     indices.push_back(0);
     indices.push_back(1);
     indices.push_back(2);
@@ -78,8 +77,8 @@ void experimental::init_late(void)
     indices.push_back(0);
 
     s_vbo = std::make_unique<utils::StreamBuffer>(sizeof(Vertex) * s_vertices.size(), SDL_GPU_BUFFERUSAGE_VERTEX);
-    s_ibo = std::make_unique<utils::BasicBuffer>(sizeof(std::uint32_t) * indices.size(), SDL_GPU_BUFFERUSAGE_INDEX);
-    s_ibo->upload_wait<std::uint32_t>(indices);
+    s_ibo = std::make_unique<utils::StaticBuffer>(sizeof(Uint32) * indices.size(), SDL_GPU_BUFFERUSAGE_INDEX);
+    s_ibo->upload<Uint32>(indices);
 
     SDL_GPUColorTargetDescription color_target_desc {};
     color_target_desc.format = SDL_GetGPUSwapchainTextureFormat(globals::gpu_device, globals::window);
@@ -146,17 +145,18 @@ void experimental::update(void)
     auto sval = std::sinf(freq);
     auto cval = std::cosf(freq);
 
-    auto freq1 = 2.0f * s_phase * 2.0f * float(M_PI);
+    auto freq1 = 2.0f * freq;
     auto sval1 = std::sinf(freq1) / 128.0f;
     auto cval1 = std::cosf(freq1) / 128.0f;
 
-    s_camera.set_projection_perspective(float(M_PI_2), video::aspect, 0.01f, 200.0f);
+    // s_camera.set_projection_perspective(float(M_PI_2), video::aspect, 0.01f, 200.0f);
+    s_camera.set_projection_ortho(-2.0f, 2.0f, -2.0f, 2.0f, 0.0f, 100.0f);
     s_camera.set_look(Eigen::Vector3f(sval, 1.0f, cval), Eigen::Vector3f::Zero());
     s_camera.update();
 
     s_vertices[0].position += Eigen::Vector3f::Constant(sval1);
-    s_vertices[1].position += Eigen::Vector3f::Constant(cval1);
-    s_vertices[2].position += Eigen::Vector3f::Constant(sval1);
+    s_vertices[1].position += Eigen::Vector3f::Constant(cval / 128.0f);
+    s_vertices[2].position += Eigen::Vector3f::Constant(sval / 128.0f);
     s_vertices[3].position += Eigen::Vector3f::Constant(cval1);
 }
 
