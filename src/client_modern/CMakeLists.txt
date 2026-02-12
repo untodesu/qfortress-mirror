@@ -1,6 +1,7 @@
 find_program(GLSLANG_VALIDATOR glslangValidator REQUIRED)
 
 add_library(client_modern STATIC
+    "${CMAKE_CURRENT_LIST_DIR}/res/texture2D.cc"
     "${CMAKE_CURRENT_LIST_DIR}/utils/static_buffer.cc"
     "${CMAKE_CURRENT_LIST_DIR}/utils/static_buffer.hh"
     "${CMAKE_CURRENT_LIST_DIR}/utils/stream_buffer.cc"

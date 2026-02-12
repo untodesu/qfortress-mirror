@@ -6,7 +6,7 @@ namespace experimental
 {
 void init(void);
 void init_late(void);
-void shutdown(void);
+void shutdown_early(void);
 void update(void);
 void update_late(void);
 void render(SDL_GPUCommandBuffer* command_buffer);

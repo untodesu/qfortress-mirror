@@ -1,4 +1,5 @@
 add_library(client STATIC
+    "${CMAKE_CURRENT_LIST_DIR}/res/texture2D.hh"
     "${CMAKE_CURRENT_LIST_DIR}/globals.cc"
     "${CMAKE_CURRENT_LIST_DIR}/globals.hh"
     "${CMAKE_CURRENT_LIST_DIR}/main.cc"

@@ -6,11 +6,14 @@
 #include "core/entity/transform.hh"
 #include "core/exceptions.hh"
 #include "core/level/level.hh"
+#include "core/res/image.hh"
+#include "core/res/resource.hh"
 #include "core/utils/epoch.hh"
 #include "core/version.hh"
 
 #include "client/globals.hh"
 #include "client/render.hh"
+#include "client/res/texture2D.hh"
 #include "client/video.hh"
 
 static std::atomic_bool s_is_running;
@@ -42,6 +45,9 @@ void client::main(void)
     std::signal(SIGTERM, &signal_handler);
 
     qf::throw_if_not_fmt<std::runtime_error>(SDL_Init(SDL_INIT_EVENTS), "SDL_Init for events subsystem failed: {}", SDL_GetError());
+
+    Image::register_resource();
+    Texture2D::register_resource();
 
     video::init();
     render::init();
@@ -107,10 +113,16 @@ void client::main(void)
         render::update_late();
 
         globals::client_framecount += 1;
+
+        res::soft_purge();
     }
 
     LOG_INFO("client shutdown after {} frames", globals::client_framecount);
     LOG_INFO("average framerate: {:.03f} FPS ({:.03f} ms)", 1.0f / globals::client_frametime_avg, 1000.0f * globals::client_frametime_avg);
+
+    render::shutdown_early();
+
+    res::hard_purge();
 
     render::shutdown();
     video::shutdown();

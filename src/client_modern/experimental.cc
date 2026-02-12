@@ -4,12 +4,13 @@
 
 #include "core/exceptions.hh"
 #include "core/math/camera.hh"
+#include "core/res/resource.hh"
 
+#include "client/res/texture2D.hh"
 #include "client/video.hh"
 
 #include "client_modern/globals.hh"
 #include "client_modern/utils/static_buffer.hh"
-#include "client_modern/utils/stream_buffer.hh"
 
 extern const std::uint8_t spirv_experimental_vert[];
 extern const std::size_t spirv_experimental_vert_size;
@@ -27,10 +28,11 @@ struct Uniforms final {
 };
 
 static SDL_GPUGraphicsPipeline* s_pipeline;
-static std::unique_ptr<utils::StreamBuffer> s_vbo;
+static std::unique_ptr<utils::StaticBuffer> s_vbo;
 static std::unique_ptr<utils::StaticBuffer> s_ibo;
 
-static std::vector<Vertex> s_vertices;
+static res::handle<Texture2D> s_texture;
+static SDL_GPUSampler* s_sampler;
 
 static math::Camera s_camera;
 static float s_phase;
@@ -56,17 +58,19 @@ void experimental::init_late(void)
     frag_info.entrypoint = "main";
     frag_info.format = SDL_GPU_SHADERFORMAT_SPIRV;
     frag_info.stage = SDL_GPU_SHADERSTAGE_FRAGMENT;
+    frag_info.num_samplers = 1;
 
     auto vert = SDL_CreateGPUShader(globals::gpu_device, &vert_info);
-    qf::throw_if_not_fmt<std::runtime_error>(vert, "SDL_CreateGPUShader (vert) failed: {}", SDL_GetError());
+    qf::throw_if_not_fmt<std::runtime_error>(vert, "failed to create a vertex shader: {}", SDL_GetError());
 
     auto frag = SDL_CreateGPUShader(globals::gpu_device, &frag_info);
-    qf::throw_if_not_fmt<std::runtime_error>(frag, "SDL_CreateGPUShader (frag) failed: {}", SDL_GetError());
+    qf::throw_if_not_fmt<std::runtime_error>(frag, "failed to create a fragment shader: {}", SDL_GetError());
 
-    s_vertices.push_back({ Eigen::Vector3f(-0.5f, -0.5f, 0.0f), Eigen::Vector2f(0.0f, 0.0f) });
-    s_vertices.push_back({ Eigen::Vector3f(-0.5f, +0.5f, 0.0f), Eigen::Vector2f(0.0f, 1.0f) });
-    s_vertices.push_back({ Eigen::Vector3f(+0.5f, +0.5f, 0.0f), Eigen::Vector2f(1.0f, 1.0f) });
-    s_vertices.push_back({ Eigen::Vector3f(+0.5f, -0.5f, 0.0f), Eigen::Vector2f(1.0f, 0.0f) });
+    std::vector<Vertex> vertices;
+    vertices.push_back({ Eigen::Vector3f(-0.5f, -0.5f, 0.0f), Eigen::Vector2f(0.0f, 0.0f) });
+    vertices.push_back({ Eigen::Vector3f(-0.5f, +0.5f, 0.0f), Eigen::Vector2f(0.0f, 1.0f) });
+    vertices.push_back({ Eigen::Vector3f(+0.5f, +0.5f, 0.0f), Eigen::Vector2f(1.0f, 1.0f) });
+    vertices.push_back({ Eigen::Vector3f(+0.5f, -0.5f, 0.0f), Eigen::Vector2f(1.0f, 0.0f) });
 
     std::vector<Uint32> indices;
     indices.push_back(0);
@@ -76,7 +80,9 @@ void experimental::init_late(void)
     indices.push_back(3);
     indices.push_back(0);
 
-    s_vbo = std::make_unique<utils::StreamBuffer>(sizeof(Vertex) * s_vertices.size(), SDL_GPU_BUFFERUSAGE_VERTEX);
+    s_vbo = std::make_unique<utils::StaticBuffer>(sizeof(Vertex) * vertices.size(), SDL_GPU_BUFFERUSAGE_VERTEX);
+    s_vbo->upload<Vertex>(vertices);
+
     s_ibo = std::make_unique<utils::StaticBuffer>(sizeof(Uint32) * indices.size(), SDL_GPU_BUFFERUSAGE_INDEX);
     s_ibo->upload<Uint32>(indices);
 
@@ -119,18 +125,35 @@ void experimental::init_late(void)
 
     pipeline_info.primitive_type = SDL_GPU_PRIMITIVETYPE_TRIANGLELIST;
     pipeline_info.rasterizer_state.cull_mode = SDL_GPU_CULLMODE_NONE;
-    pipeline_info.rasterizer_state.fill_mode = SDL_GPU_FILLMODE_LINE;
+    pipeline_info.rasterizer_state.fill_mode = SDL_GPU_FILLMODE_FILL;
     pipeline_info.rasterizer_state.front_face = SDL_GPU_FRONTFACE_COUNTER_CLOCKWISE;
 
     s_pipeline = SDL_CreateGPUGraphicsPipeline(globals::gpu_device, &pipeline_info);
-    qf::throw_if_not_fmt<std::runtime_error>(s_pipeline, "SDL_CreateGPUGraphicsPipeline failed: {}", SDL_GetError());
+    qf::throw_if_not_fmt<std::runtime_error>(s_pipeline, "failed to create a GPU graphics pipeline: {}", SDL_GetError());
 
     SDL_ReleaseGPUShader(globals::gpu_device, frag);
     SDL_ReleaseGPUShader(globals::gpu_device, vert);
+
+    s_texture = res::load<Texture2D>("textures/trollface.png", RESFLAG_TEX2D_FLIP);
+    qf::throw_if_not<std::runtime_error>(s_texture.get(), "failed to load a texture");
+
+    SDL_GPUSamplerCreateInfo sampler_info {};
+    sampler_info.min_filter = SDL_GPU_FILTER_LINEAR;
+    sampler_info.mag_filter = SDL_GPU_FILTER_LINEAR;
+    sampler_info.mipmap_mode = SDL_GPU_SAMPLERMIPMAPMODE_LINEAR;
+    sampler_info.address_mode_u = SDL_GPU_SAMPLERADDRESSMODE_REPEAT;
+    sampler_info.address_mode_v = SDL_GPU_SAMPLERADDRESSMODE_REPEAT;
+
+    s_sampler = SDL_CreateGPUSampler(globals::gpu_device, &sampler_info);
+    qf::throw_if_not_fmt<std::runtime_error>(s_sampler, "failed to create a GPU sampler: {}", SDL_GetError());
 }
 
-void experimental::shutdown(void)
+void experimental::shutdown_early(void)
 {
+    SDL_ReleaseGPUSampler(globals::gpu_device, s_sampler);
+
+    s_texture.reset();
+
     s_ibo.reset();
     s_vbo.reset();
 
@@ -145,24 +168,14 @@ void experimental::update(void)
     auto sval = std::sinf(freq);
     auto cval = std::cosf(freq);
 
-    auto freq1 = 2.0f * freq;
-    auto sval1 = std::sinf(freq1) / 128.0f;
-    auto cval1 = std::cosf(freq1) / 128.0f;
-
-    // s_camera.set_projection_perspective(float(M_PI_2), video::aspect, 0.01f, 200.0f);
-    s_camera.set_projection_ortho(-2.0f, 2.0f, -2.0f, 2.0f, 0.0f, 100.0f);
-    s_camera.set_look(Eigen::Vector3f(sval, 1.0f, cval), Eigen::Vector3f::Zero());
+    s_camera.set_projection_perspective(float(M_PI_2), video::aspect, 0.01f, 200.0f);
+    s_camera.set_look(Eigen::Vector3f(sval, sval, cval), Eigen::Vector3f::Zero());
     s_camera.update();
-
-    s_vertices[0].position += Eigen::Vector3f::Constant(sval1);
-    s_vertices[1].position += Eigen::Vector3f::Constant(cval / 128.0f);
-    s_vertices[2].position += Eigen::Vector3f::Constant(sval / 128.0f);
-    s_vertices[3].position += Eigen::Vector3f::Constant(cval1);
 }
 
 void experimental::update_late(void)
 {
-    s_vbo->update_late();
+    // empty
 }
 
 void experimental::render(SDL_GPUCommandBuffer* command_buffer)
@@ -170,13 +183,7 @@ void experimental::render(SDL_GPUCommandBuffer* command_buffer)
     assert(command_buffer);
 
     // Copy pass
-
-    auto copy_pass = SDL_BeginGPUCopyPass(command_buffer);
-    qf::throw_if_not<std::runtime_error>(copy_pass, "SDL_BeginGPUCopyPass returned nullptr");
-
-    auto current_vbo = s_vbo->upload<Vertex>(copy_pass, s_vertices);
-
-    SDL_EndGPUCopyPass(copy_pass);
+    // empty
 
     // Render pass
 
@@ -195,8 +202,12 @@ void experimental::render(SDL_GPUCommandBuffer* command_buffer)
 
     SDL_BindGPUGraphicsPipeline(render_pass, s_pipeline);
 
+    SDL_GPUTextureSamplerBinding texture_binding {};
+    texture_binding.texture = reinterpret_cast<SDL_GPUTexture*>(s_texture->gpu_handle);
+    texture_binding.sampler = s_sampler;
+
     SDL_GPUBufferBinding vbo_binding {};
-    vbo_binding.buffer = current_vbo;
+    vbo_binding.buffer = s_vbo->handle();
     vbo_binding.offset = 0;
 
     SDL_GPUBufferBinding ibo_binding {};
@@ -210,6 +221,8 @@ void experimental::render(SDL_GPUCommandBuffer* command_buffer)
     SDL_BindGPUIndexBuffer(render_pass, &ibo_binding, SDL_GPU_INDEXELEMENTSIZE_32BIT);
 
     SDL_PushGPUVertexUniformData(command_buffer, 0, &uniforms, sizeof(uniforms));
+
+    SDL_BindGPUFragmentSamplers(render_pass, 0, &texture_binding, 1);
 
     SDL_DrawGPUIndexedPrimitives(render_pass, 6, 1, 0, 0, 0);
 

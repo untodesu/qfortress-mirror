@@ -28,12 +28,15 @@ void render::init_late(void)
     experimental::init_late();
 }
 
-void render::shutdown(void)
+void render::shutdown_early(void)
 {
     SDL_WaitForGPUIdle(globals::gpu_device);
 
-    experimental::shutdown();
+    experimental::shutdown_early();
+}
 
+void render::shutdown(void)
+{
     SDL_ReleaseWindowFromGPUDevice(globals::gpu_device, globals::window);
     SDL_DestroyGPUDevice(globals::gpu_device);
 }

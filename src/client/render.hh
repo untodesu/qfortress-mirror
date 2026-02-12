@@ -10,6 +10,7 @@ namespace render
 {
 void init(void);
 void init_late(void);
+void shutdown_early(void);
 void shutdown(void);
 void update(void);
 void update_late(void);
