@@ -5,11 +5,11 @@
             "name": "QFengine",
             "cppStandard": "c++20",
             "defines": [
-                "GLFW_INCLUDE_NONE",
                 "MINIZ_NO_STDIO",
                 "MINIZ_NO_ZLIB_COMPATIBLE_NAMES",
                 "SPDLOG_USE_STD_FORMAT",
                 "NOMINMAX",
+                "QF_CLIENT_MODERN",
                 "_CRT_SECURE_NO_WARNINGS",
                 "_USE_MATH_DEFINES"
             ],
@@ -21,6 +21,7 @@
                 "${workspaceFolder}/external/eigen/include",
                 "${workspaceFolder}/external/enet/include",
                 "${workspaceFolder}/external/entt/include",
+                "${workspaceFolder}/external/imgui/include",
                 "${workspaceFolder}/external/parson/include",
                 "${workspaceFolder}/external/physfs/include",
                 "${workspaceFolder}/external/stb/include",

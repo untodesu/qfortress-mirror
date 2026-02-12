@@ -9,7 +9,7 @@ void init_late(void);
 void shutdown_early(void);
 void update(void);
 void update_late(void);
-void render(SDL_GPUCommandBuffer* command_buffer);
+void render(void);
 } // namespace experimental
 
 #endif

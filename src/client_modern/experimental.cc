@@ -178,10 +178,8 @@ void experimental::update_late(void)
     // empty
 }
 
-void experimental::render(SDL_GPUCommandBuffer* command_buffer)
+void experimental::render(void)
 {
-    assert(command_buffer);
-
     // Copy pass
     // empty
 
@@ -197,13 +195,13 @@ void experimental::render(SDL_GPUCommandBuffer* command_buffer)
     target_info.clear_color.b = 0.1f;
     target_info.clear_color.a = 0.0f;
 
-    auto render_pass = SDL_BeginGPURenderPass(command_buffer, &target_info, 1, nullptr);
+    auto render_pass = SDL_BeginGPURenderPass(globals::gpu_commands_main, &target_info, 1, nullptr);
     qf::throw_if_not<std::runtime_error>(render_pass, "SDL_BeginGPURenderPass returned nullptr");
 
     SDL_BindGPUGraphicsPipeline(render_pass, s_pipeline);
 
     SDL_GPUTextureSamplerBinding texture_binding {};
-    texture_binding.texture = reinterpret_cast<SDL_GPUTexture*>(s_texture->gpu_handle);
+    texture_binding.texture = s_texture->modern;
     texture_binding.sampler = s_sampler;
 
     SDL_GPUBufferBinding vbo_binding {};
@@ -220,7 +218,7 @@ void experimental::render(SDL_GPUCommandBuffer* command_buffer)
     SDL_BindGPUVertexBuffers(render_pass, 0, &vbo_binding, 1);
     SDL_BindGPUIndexBuffer(render_pass, &ibo_binding, SDL_GPU_INDEXELEMENTSIZE_32BIT);
 
-    SDL_PushGPUVertexUniformData(command_buffer, 0, &uniforms, sizeof(uniforms));
+    SDL_PushGPUVertexUniformData(globals::gpu_commands_main, 0, &uniforms, sizeof(uniforms));
 
     SDL_BindGPUFragmentSamplers(render_pass, 0, &texture_binding, 1);
 

@@ -5,7 +5,7 @@
 #include "core/exceptions.hh"
 
 #include "client/globals.hh"
-#include "client/render.hh"
+#include "client/renderer.hh"
 
 int video::width;
 int video::height;
@@ -26,7 +26,7 @@ void video::init(void)
 {
     qf::throw_if_not_fmt<std::runtime_error>(SDL_Init(SDL_INIT_VIDEO), "SDL_Init for video subsystem failed: {}", SDL_GetError());
 
-    globals::window = SDL_CreateWindow("client", 640, 480, SDL_WINDOW_RESIZABLE | render::window_flags());
+    globals::window = SDL_CreateWindow("client", 640, 480, SDL_WINDOW_RESIZABLE | renderer::backend::window_flags());
     qf::throw_if_not_fmt<std::runtime_error>(globals::window, "SDL_CreateWindow failed: {}", SDL_GetError());
 
     video::width = 640;

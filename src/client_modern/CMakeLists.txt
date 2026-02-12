@@ -11,9 +11,13 @@ add_library(client_modern STATIC
     "${CMAKE_CURRENT_LIST_DIR}/globals.cc"
     "${CMAKE_CURRENT_LIST_DIR}/globals.hh"
     "${CMAKE_CURRENT_LIST_DIR}/pch.hh"
-    "${CMAKE_CURRENT_LIST_DIR}/render.cc")
+    "${CMAKE_CURRENT_LIST_DIR}/renderer_backend.cc"
+    "${CMAKE_CURRENT_LIST_DIR}/renderer.cc")
 target_compile_features(client_modern PUBLIC cxx_std_20)
+target_compile_definitions(client_modern PRIVATE QF_CLIENT_MODERN)
 target_include_directories(client_modern PUBLIC "${PROJECT_SOURCE_DIR}/src")
+target_link_libraries(client_modern PUBLIC
+    external::imgui-backend-sdlgpu3)
 target_link_libraries(client_modern PUBLIC client)
 target_precompile_headers(client_modern PRIVATE "${CMAKE_CURRENT_LIST_DIR}/pch.hh")
 

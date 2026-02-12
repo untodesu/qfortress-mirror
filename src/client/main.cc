@@ -11,8 +11,9 @@
 #include "core/utils/epoch.hh"
 #include "core/version.hh"
 
+#include "client/game.hh"
 #include "client/globals.hh"
-#include "client/render.hh"
+#include "client/renderer.hh"
 #include "client/res/texture2D.hh"
 #include "client/video.hh"
 
@@ -50,10 +51,18 @@ void client::main(void)
     Texture2D::register_resource();
 
     video::init();
-    render::init();
+
+    renderer::backend::init();
+    renderer::init();
+
+    client_game::init();
 
     video::init_late();
-    render::init_late();
+
+    renderer::backend::init_late();
+    renderer::init_late();
+
+    client_game::init_late();
 
     Transform::register_component();
     CurrentLeaf::register_component();
@@ -100,17 +109,23 @@ void client::main(void)
 
         handle_events();
 
-        render::update();
+        renderer::update();
 
-        render::begin_frame();
+        client_game::update();
 
-        render::render();
+        renderer::backend::prepare();
 
-        render::layout();
+        renderer::render();
 
-        render::end_frame();
+        client_game::layout();
 
-        render::update_late();
+        renderer::layout();
+
+        renderer::backend::present();
+
+        renderer::update_late();
+
+        client_game::update_late();
 
         globals::client_framecount += 1;
 
@@ -120,11 +135,13 @@ void client::main(void)
     LOG_INFO("client shutdown after {} frames", globals::client_framecount);
     LOG_INFO("average framerate: {:.03f} FPS ({:.03f} ms)", 1.0f / globals::client_frametime_avg, 1000.0f * globals::client_frametime_avg);
 
-    render::shutdown_early();
+    client_game::shutdown();
+    renderer::shutdown();
 
     res::hard_purge();
 
-    render::shutdown();
+    renderer::backend::shutdown();
+
     video::shutdown();
 }
 

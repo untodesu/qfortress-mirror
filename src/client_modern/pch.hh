@@ -6,4 +6,6 @@
 
 #include <SDL3/SDL_gpu.h>
 
+#include <imgui_impl_sdlgpu3.h>
+
 #endif

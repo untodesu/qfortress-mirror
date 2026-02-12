@@ -120,7 +120,7 @@ static const void* texture2D_load_fn_modern(const char* name, std::uint32_t flag
     texture->width = image->width;
     texture->height = image->height;
     texture->channels = image->channels;
-    texture->gpu_handle = gpu_handle;
+    texture->modern = gpu_handle;
 
     return texture;
 }
@@ -130,7 +130,7 @@ static void texture2D_free_fn_modern(const void* resource)
     assert(resource);
 
     auto texture = reinterpret_cast<const Texture2D*>(resource);
-    SDL_ReleaseGPUTexture(globals::gpu_device, reinterpret_cast<SDL_GPUTexture*>(texture->gpu_handle));
+    SDL_ReleaseGPUTexture(globals::gpu_device, texture->modern);
 
     delete texture;
 }
