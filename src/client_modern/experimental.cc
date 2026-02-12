@@ -14,8 +14,8 @@ extern const std::uint8_t spirv_experimental_frag[];
 extern const std::size_t spirv_experimental_frag_size;
 
 static SDL_GPUGraphicsPipeline* s_pipeline;
-static SDL_GPUBuffer* s_vbo;
-static SDL_GPUBuffer* s_ibo;
+static std::unique_ptr<utils::Buffer> s_vbo;
+static std::unique_ptr<utils::Buffer> s_ibo;
 
 struct Vertex final {
     Eigen::Vector3f position;
@@ -63,22 +63,11 @@ void experimental::init_late(void)
     indices.push_back(3);
     indices.push_back(0);
 
-    SDL_GPUBufferCreateInfo vbo_info {};
-    vbo_info.size = static_cast<Uint32>(vertices.size() * sizeof(Vertex));
-    vbo_info.usage = SDL_GPU_BUFFERUSAGE_VERTEX;
+    s_vbo = std::make_unique<utils::Buffer>(sizeof(Vertex) * vertices.size(), SDL_GPU_BUFFERUSAGE_VERTEX);
+    s_vbo->upload_wait<Vertex>(vertices);
 
-    SDL_GPUBufferCreateInfo ibo_info {};
-    ibo_info.size = static_cast<Uint32>(indices.size() * sizeof(std::uint32_t));
-    ibo_info.usage = SDL_GPU_BUFFERUSAGE_INDEX;
-
-    s_vbo = SDL_CreateGPUBuffer(globals::gpu_device, &vbo_info);
-    qf::throw_if_not_fmt<std::runtime_error>(s_vbo, "SDL_CreateGPUBuffer (VBO) failed: {}", SDL_GetError());
-
-    s_ibo = SDL_CreateGPUBuffer(globals::gpu_device, &ibo_info);
-    qf::throw_if_not_fmt<std::runtime_error>(s_ibo, "SDL_CreateGPUBuffer (IBO) failed: {}", SDL_GetError());
-
-    utils::buffer_upload_wait(s_vbo, vertices.data(), vertices.size() * sizeof(Vertex), 0);
-    utils::buffer_upload_wait(s_ibo, indices.data(), indices.size() * sizeof(std::uint32_t), 0);
+    s_ibo = std::make_unique<utils::Buffer>(sizeof(std::uint32_t) * indices.size(), SDL_GPU_BUFFERUSAGE_INDEX);
+    s_ibo->upload_wait<std::uint32_t>(indices);
 
     SDL_GPUColorTargetDescription color_target_desc {};
     color_target_desc.format = SDL_GetGPUSwapchainTextureFormat(globals::gpu_device, globals::window);
@@ -131,8 +120,9 @@ void experimental::init_late(void)
 
 void experimental::shutdown(void)
 {
-    SDL_ReleaseGPUBuffer(globals::gpu_device, s_ibo);
-    SDL_ReleaseGPUBuffer(globals::gpu_device, s_vbo);
+    s_ibo.reset();
+    s_vbo.reset();
+
     SDL_ReleaseGPUGraphicsPipeline(globals::gpu_device, s_pipeline);
 }
 
@@ -143,11 +133,11 @@ void experimental::render(SDL_GPURenderPass* render_pass)
     SDL_BindGPUGraphicsPipeline(render_pass, s_pipeline);
 
     SDL_GPUBufferBinding vbo_binding {};
-    vbo_binding.buffer = s_vbo;
+    vbo_binding.buffer = s_vbo->handle();
     vbo_binding.offset = 0;
 
     SDL_GPUBufferBinding ibo_binding {};
-    ibo_binding.buffer = s_ibo;
+    ibo_binding.buffer = s_ibo->handle();
     ibo_binding.offset = 0;
 
     SDL_BindGPUVertexBuffers(render_pass, 0, &vbo_binding, 1);

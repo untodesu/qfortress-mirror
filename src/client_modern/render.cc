@@ -14,12 +14,12 @@ static SDL_GPURenderPass* s_render_pass;
 void render::init(void)
 {
     globals::gpu_device = SDL_CreateGPUDevice(SDL_GPU_SHADERFORMAT_SPIRV, false, nullptr);
-    qf::throw_if_not_fmt<std::runtime_error>(globals::gpu_device, "SDL_CreateGPUDevice failed: {}", SDL_GetError());
+    qf::throw_if_not_fmt<std::runtime_error>(globals::gpu_device, "failed to create a GPU device: {}", SDL_GetError());
 
     LOG_INFO("using SDL_GPU implementation: {}", SDL_GetGPUDeviceDriver(globals::gpu_device));
 
     auto window_claimed = SDL_ClaimWindowForGPUDevice(globals::gpu_device, globals::window);
-    qf::throw_if_not_fmt<std::runtime_error>(window_claimed, "SDL_ClaimWindowForGPUDevice failed: {}", SDL_GetError());
+    qf::throw_if_not_fmt<std::runtime_error>(window_claimed, "failed to claim an SDL window for GPU operations: {}", SDL_GetError());
 
     experimental::init();
 }
@@ -52,15 +52,15 @@ void render::update_late(void)
 void render::begin_frame(void)
 {
     s_command_buffer = SDL_AcquireGPUCommandBuffer(globals::gpu_device);
-    qf::throw_if_not_fmt<std::runtime_error>(s_command_buffer, "SDL_AcquireGPUCommandBuffer failed: {}", SDL_GetError());
+    qf::throw_if_not_fmt<std::runtime_error>(s_command_buffer, "failed to acquire a GPU command buffer: {}", SDL_GetError());
 
     Uint32 swapchain_width;
     Uint32 swapchain_height;
 
     auto swapchain_acquired = SDL_WaitAndAcquireGPUSwapchainTexture(s_command_buffer, globals::window, &globals::gpu_swapchain,
         &swapchain_width, &swapchain_height);
-    qf::throw_if_not_fmt<std::runtime_error>(swapchain_acquired, "SDL_WaitAndAcquireGPUSwapchainTexture failed: {}", SDL_GetError());
-    qf::throw_if_not_fmt<std::runtime_error>(globals::gpu_swapchain, "swapchain texture is null");
+    qf::throw_if_not_fmt<std::runtime_error>(swapchain_acquired, "failed to acquire a GPU swapchain texture: {}", SDL_GetError());
+    qf::throw_if_not_fmt<std::runtime_error>(globals::gpu_swapchain, "SDL_WaitAndAcquireGPUSwapchainTexture returned nullptr");
 
     SDL_GPUColorTargetInfo target_info {};
     target_info.texture = globals::gpu_swapchain;
@@ -73,7 +73,7 @@ void render::begin_frame(void)
     target_info.clear_color.a = 0.0f;
 
     s_render_pass = SDL_BeginGPURenderPass(s_command_buffer, &target_info, 1, nullptr);
-    qf::throw_if_not<std::runtime_error>(s_render_pass, "SDL_BeginGPURenderPass returned null");
+    qf::throw_if_not<std::runtime_error>(s_render_pass, "SDL_BeginGPURenderPass returned nullptr");
 }
 
 void render::end_frame(void)

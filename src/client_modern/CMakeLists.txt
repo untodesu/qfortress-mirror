@@ -1,12 +1,12 @@
 find_program(GLSLANG_VALIDATOR glslangValidator REQUIRED)
 
 add_library(client_modern STATIC
-    "${CMAKE_CURRENT_LIST_DIR}/utils/buffer.hh"
     "${CMAKE_CURRENT_LIST_DIR}/utils/buffer.cc"
-    "${CMAKE_CURRENT_LIST_DIR}/experimental.hh"
+    "${CMAKE_CURRENT_LIST_DIR}/utils/buffer.hh"
     "${CMAKE_CURRENT_LIST_DIR}/experimental.cc"
-    "${CMAKE_CURRENT_LIST_DIR}/globals.hh"
+    "${CMAKE_CURRENT_LIST_DIR}/experimental.hh"
     "${CMAKE_CURRENT_LIST_DIR}/globals.cc"
+    "${CMAKE_CURRENT_LIST_DIR}/globals.hh"
     "${CMAKE_CURRENT_LIST_DIR}/pch.hh"
     "${CMAKE_CURRENT_LIST_DIR}/render.cc")
 target_compile_features(client_modern PUBLIC cxx_std_20)
