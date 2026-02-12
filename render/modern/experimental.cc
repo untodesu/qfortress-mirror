@@ -167,8 +167,8 @@ void experimental::update(void)
     auto sval = std::sinf(freq);
     auto cval = std::cosf(freq);
 
-    s_camera.set_projection_perspective(float(M_PI) / 3.0f, 640.0f / 480.0f, 0.1f, 100.0f);
-    s_camera.set_look(Eigen::Vector3f(sval, 1.0f, cval), Eigen::Vector3f::Zero());
+    s_camera.set_projection_perspective(float(M_PI) / 2.0f, 640.0f / 480.0f, 0.1f, 100.0f);
+    s_camera.set_look(Eigen::Vector3f(sval, sval, cval), Eigen::Vector3f::Zero());
     s_camera.update();
 }
 
