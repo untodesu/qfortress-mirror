@@ -1,4 +1,6 @@
 add_library(game_client STATIC
+    "${CMAKE_CURRENT_LIST_DIR}/config/key_binding.cc"
+    "${CMAKE_CURRENT_LIST_DIR}/config/key_binding.hh"
     "${CMAKE_CURRENT_LIST_DIR}/game.cc"
     "${CMAKE_CURRENT_LIST_DIR}/game.hh"
     "${CMAKE_CURRENT_LIST_DIR}/globals.cc"

@@ -17,6 +17,7 @@ void present(void);
 
 namespace render_backend
 {
+std::string_view display_name(void);
 SDL_WindowFlags window_flags(void);
 } // namespace render_backend
 

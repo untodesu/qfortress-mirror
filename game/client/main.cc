@@ -38,6 +38,26 @@ static void handle_events(void)
             return;
         }
 
+        switch(event.type) {
+            case SDL_EVENT_KEY_DOWN:
+            case SDL_EVENT_KEY_UP:
+                globals::dispatcher.trigger(static_cast<const SDL_KeyboardEvent&>(event.key));
+                break;
+
+            case SDL_EVENT_MOUSE_MOTION:
+                globals::dispatcher.trigger(static_cast<const SDL_MouseMotionEvent&>(event.motion));
+                break;
+
+            case SDL_EVENT_MOUSE_BUTTON_DOWN:
+            case SDL_EVENT_MOUSE_BUTTON_UP:
+                globals::dispatcher.trigger(static_cast<const SDL_MouseButtonEvent&>(event.button));
+                break;
+
+            case SDL_EVENT_MOUSE_WHEEL:
+                globals::dispatcher.trigger(static_cast<const SDL_MouseWheelEvent&>(event.wheel));
+                break;
+        }
+
         globals::dispatcher.trigger(static_cast<const SDL_Event&>(event));
     }
 }

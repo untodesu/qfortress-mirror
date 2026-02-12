@@ -133,7 +133,7 @@ void experimental::init_late(void)
     SDL_ReleaseGPUShader(globals::gpu_device, frag);
     SDL_ReleaseGPUShader(globals::gpu_device, vert);
 
-    s_texture = res::load<Texture2D>("textures/trollface.png", RESFLAG_TEX2D_FLIP);
+    s_texture = res::load<Texture2D>("textures/vkschwain.png", RESFLAG_TEX2D_FLIP);
     qf::throw_if_not<std::runtime_error>(s_texture.get(), "failed to load a texture");
 
     SDL_GPUSamplerCreateInfo sampler_info {};
@@ -163,12 +163,12 @@ void experimental::update(void)
 {
     s_phase += globals::client_frametime;
 
-    auto freq = s_phase * 2.0f * float(M_PI);
+    auto freq = 2.5f * s_phase * float(M_PI);
     auto sval = std::sinf(freq);
     auto cval = std::cosf(freq);
 
-    s_camera.set_projection_perspective(float(M_PI_2), 640.0f / 480.0f, 0.1f, 100.0f);
-    s_camera.set_look(Eigen::Vector3f(sval, sval, cval), Eigen::Vector3f::Zero());
+    s_camera.set_projection_perspective(float(M_PI) / 3.0f, 640.0f / 480.0f, 0.1f, 100.0f);
+    s_camera.set_look(Eigen::Vector3f(sval, 1.0f, cval), Eigen::Vector3f::Zero());
     s_camera.update();
 }
 

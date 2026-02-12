@@ -4,19 +4,27 @@
 
 #include "core/resource.hh"
 
+#include "game/client/globals.hh"
+
 #include "render/texture2d.hh"
 
 static res::handle<Texture2D> s_texture;
 
+static void on_sdl_key(const SDL_KeyboardEvent& event)
+{
+    if(event.type == SDL_EVENT_KEY_DOWN && event.key == SDLK_ESCAPE) {
+        std::raise(SIGINT);
+    }
+}
+
 void client_game::init(void)
 {
-    // empty
+    globals::dispatcher.sink<SDL_KeyboardEvent>().connect<&on_sdl_key>();
 }
 
 void client_game::init_late(void)
 {
-    s_texture = res::load<Texture2D>("textures/trollface.png", RESFLAG_TEX2D_FLIP);
-    assert(s_texture.get());
+    s_texture = res::load<Texture2D>("textures/trollface.png");
 }
 
 void client_game::shutdown(void)
@@ -46,5 +54,5 @@ void client_game::fixed_update_late(void)
 
 void client_game::layout(void)
 {
-    ImGui::Image(s_texture->imgui, ImVec2(256.0f, 256.0f), ImVec2(0.0f, 1.0f), ImVec2(1.0f, 0.0f));
+    ImGui::Image(s_texture->imgui, ImVec2(256.0f, 196.0f));
 }

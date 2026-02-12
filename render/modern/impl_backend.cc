@@ -43,6 +43,9 @@ void render_backend::init(void)
     auto window_claimed = SDL_ClaimWindowForGPUDevice(globals::gpu_device, globals::window);
     qf::throw_if_not_fmt<std::runtime_error>(window_claimed, "failed to claim an SDL window for GPU operations: {}", SDL_GetError());
 
+    // Set present mode to immediate
+    SDL_SetGPUSwapchainParameters(globals::gpu_device, globals::window, SDL_GPU_SWAPCHAINCOMPOSITION_SDR, SDL_GPU_PRESENTMODE_IMMEDIATE);
+
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGui::StyleColorsDark();
@@ -80,12 +83,9 @@ void render_backend::prepare(void)
     globals::gpu_commands_main = SDL_AcquireGPUCommandBuffer(globals::gpu_device);
     qf::throw_if_not_fmt<std::runtime_error>(globals::gpu_commands_main, "failed to acquire a GPU command buffer: {}", SDL_GetError());
 
-    Uint32 swapchain_width;
-    Uint32 swapchain_height;
-
-    auto swapchain_acquired = SDL_WaitAndAcquireGPUSwapchainTexture(globals::gpu_commands_main, globals::window, &globals::gpu_swapchain,
-        &swapchain_width, &swapchain_height);
-    qf::throw_if_not_fmt<std::runtime_error>(swapchain_acquired, "failed to acquire a GPU swapchain texture: {}", SDL_GetError());
+    auto gpu_swapchain_acquired = SDL_WaitAndAcquireGPUSwapchainTexture(globals::gpu_commands_main, globals::window,
+        &globals::gpu_swapchain, nullptr, nullptr);
+    qf::throw_if_not_fmt<std::runtime_error>(gpu_swapchain_acquired, "failed to acquire a GPU swapchain texture: {}", SDL_GetError());
     qf::throw_if_not_fmt<std::runtime_error>(globals::gpu_swapchain, "SDL_WaitAndAcquireGPUSwapchainTexture returned nullptr");
 
     ImGui_ImplSDLGPU3_NewFrame();
@@ -98,6 +98,11 @@ void render_backend::present(void)
     do_imgui_render_pass();
 
     SDL_SubmitGPUCommandBuffer(globals::gpu_commands_main);
+}
+
+std::string_view render_backend::display_name(void)
+{
+    return "SDL_GPU";
 }
 
 SDL_WindowFlags render_backend::window_flags(void)
