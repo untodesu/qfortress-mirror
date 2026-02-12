@@ -7,7 +7,9 @@ namespace experimental
 void init(void);
 void init_late(void);
 void shutdown(void);
-void render(SDL_GPURenderPass* render_pass);
+void update(void);
+void update_late(void);
+void render(SDL_GPUCommandBuffer* command_buffer);
 } // namespace experimental
 
 #endif

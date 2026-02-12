@@ -1,12 +1,12 @@
 #include "client_modern/pch.hh"
 
-#include "client_modern/utils/buffer.hh"
+#include "client_modern/utils/basic_buffer.hh"
 
 #include "core/exceptions.hh"
 
 #include "client_modern/globals.hh"
 
-utils::Buffer::Buffer(std::size_t size, SDL_GPUBufferUsageFlags usage)
+utils::BasicBuffer::BasicBuffer(std::size_t size, SDL_GPUBufferUsageFlags usage)
 {
     assert(size);
     assert(usage);
@@ -21,21 +21,21 @@ utils::Buffer::Buffer(std::size_t size, SDL_GPUBufferUsageFlags usage)
     qf::throw_if_not_fmt<std::runtime_error>(m_handle, "failed to create a GPU buffer: {}", SDL_GetError());
 }
 
-utils::Buffer::~Buffer(void) noexcept
+utils::BasicBuffer::~BasicBuffer(void) noexcept
 {
     SDL_ReleaseGPUBuffer(globals::gpu_device, m_handle);
 }
 
-void utils::Buffer::upload_wait(std::span<const std::byte> data, std::ptrdiff_t byte_offset)
+void utils::BasicBuffer::upload_wait(std::span<const std::byte> data, std::ptrdiff_t byte_offset)
 {
-    assert(data.size());
+    assert(data.size_bytes());
     assert(byte_offset >= 0);
 
     assert(globals::gpu_device);
 
     SDL_GPUTransferBufferCreateInfo transfer_info {};
     transfer_info.usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD;
-    transfer_info.size = static_cast<Uint32>(data.size());
+    transfer_info.size = static_cast<Uint32>(data.size_bytes());
 
     auto transfer_buffer = SDL_CreateGPUTransferBuffer(globals::gpu_device, &transfer_info);
     qf::throw_if_not_fmt<std::runtime_error>(transfer_buffer, "failed to create a GPU transfer buffer: {}", SDL_GetError());
@@ -43,7 +43,7 @@ void utils::Buffer::upload_wait(std::span<const std::byte> data, std::ptrdiff_t 
     auto transfer_ptr = SDL_MapGPUTransferBuffer(globals::gpu_device, transfer_buffer, false);
     qf::throw_if_not_fmt<std::runtime_error>(transfer_ptr, "failed to map a GPU transfer buffer: {}", SDL_GetError());
 
-    std::memcpy(transfer_ptr, data.data(), data.size());
+    std::memcpy(transfer_ptr, data.data(), data.size_bytes());
 
     SDL_UnmapGPUTransferBuffer(globals::gpu_device, transfer_buffer);
 
@@ -60,7 +60,7 @@ void utils::Buffer::upload_wait(std::span<const std::byte> data, std::ptrdiff_t 
     SDL_GPUBufferRegion destination {};
     destination.buffer = m_handle;
     destination.offset = static_cast<Uint32>(byte_offset);
-    destination.size = static_cast<Uint32>(data.size());
+    destination.size = static_cast<Uint32>(data.size_bytes());
 
     SDL_UploadToGPUBuffer(copy_pass, &source, &destination, false);
 

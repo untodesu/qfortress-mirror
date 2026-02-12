@@ -3,9 +3,13 @@
 #include "client_modern/experimental.hh"
 
 #include "core/exceptions.hh"
+#include "core/math/camera.hh"
+
+#include "client/video.hh"
 
 #include "client_modern/globals.hh"
-#include "client_modern/utils/buffer.hh"
+#include "client_modern/utils/basic_buffer.hh"
+#include "client_modern/utils/stream_buffer.hh"
 
 extern const std::uint8_t spirv_experimental_vert[];
 extern const std::size_t spirv_experimental_vert_size;
@@ -13,18 +17,27 @@ extern const std::size_t spirv_experimental_vert_size;
 extern const std::uint8_t spirv_experimental_frag[];
 extern const std::size_t spirv_experimental_frag_size;
 
-static SDL_GPUGraphicsPipeline* s_pipeline;
-static std::unique_ptr<utils::Buffer> s_vbo;
-static std::unique_ptr<utils::Buffer> s_ibo;
-
 struct Vertex final {
     Eigen::Vector3f position;
     Eigen::Vector2f texcoord;
 };
 
+struct Uniforms final {
+    alignas(16) Eigen::Matrix4f mvp;
+};
+
+static SDL_GPUGraphicsPipeline* s_pipeline;
+static std::unique_ptr<utils::StreamBuffer> s_vbo;
+static std::unique_ptr<utils::BasicBuffer> s_ibo;
+
+static std::vector<Vertex> s_vertices;
+
+static math::Camera s_camera;
+static float s_phase;
+
 void experimental::init(void)
 {
-    // empty
+    s_phase = 0.0f;
 }
 
 void experimental::init_late(void)
@@ -35,6 +48,7 @@ void experimental::init_late(void)
     vert_info.entrypoint = "main";
     vert_info.format = SDL_GPU_SHADERFORMAT_SPIRV;
     vert_info.stage = SDL_GPU_SHADERSTAGE_VERTEX;
+    vert_info.num_uniform_buffers = 1;
 
     SDL_GPUShaderCreateInfo frag_info {};
     frag_info.code_size = spirv_experimental_frag_size;
@@ -49,11 +63,11 @@ void experimental::init_late(void)
     auto frag = SDL_CreateGPUShader(globals::gpu_device, &frag_info);
     qf::throw_if_not_fmt<std::runtime_error>(frag, "SDL_CreateGPUShader (frag) failed: {}", SDL_GetError());
 
-    std::vector<Vertex> vertices;
-    vertices.push_back({ Eigen::Vector3f(-0.5f, -0.5f, 0.0f), Eigen::Vector2f(0.0f, 0.0f) });
-    vertices.push_back({ Eigen::Vector3f(-0.5f, +0.5f, 0.0f), Eigen::Vector2f(0.0f, 1.0f) });
-    vertices.push_back({ Eigen::Vector3f(+0.5f, +0.5f, 0.0f), Eigen::Vector2f(1.0f, 1.0f) });
-    vertices.push_back({ Eigen::Vector3f(+0.5f, -0.5f, 0.0f), Eigen::Vector2f(1.0f, 0.0f) });
+    s_vertices.reserve(4);
+    s_vertices.push_back({ Eigen::Vector3f(-0.5f, -0.5f, 0.0f), Eigen::Vector2f(0.0f, 0.0f) });
+    s_vertices.push_back({ Eigen::Vector3f(-0.5f, +0.5f, 0.0f), Eigen::Vector2f(0.0f, 1.0f) });
+    s_vertices.push_back({ Eigen::Vector3f(+0.5f, +0.5f, 0.0f), Eigen::Vector2f(1.0f, 1.0f) });
+    s_vertices.push_back({ Eigen::Vector3f(+0.5f, -0.5f, 0.0f), Eigen::Vector2f(1.0f, 0.0f) });
 
     std::vector<std::uint32_t> indices;
     indices.push_back(0);
@@ -63,10 +77,8 @@ void experimental::init_late(void)
     indices.push_back(3);
     indices.push_back(0);
 
-    s_vbo = std::make_unique<utils::Buffer>(sizeof(Vertex) * vertices.size(), SDL_GPU_BUFFERUSAGE_VERTEX);
-    s_vbo->upload_wait<Vertex>(vertices);
-
-    s_ibo = std::make_unique<utils::Buffer>(sizeof(std::uint32_t) * indices.size(), SDL_GPU_BUFFERUSAGE_INDEX);
+    s_vbo = std::make_unique<utils::StreamBuffer>(sizeof(Vertex) * s_vertices.size(), SDL_GPU_BUFFERUSAGE_VERTEX);
+    s_ibo = std::make_unique<utils::BasicBuffer>(sizeof(std::uint32_t) * indices.size(), SDL_GPU_BUFFERUSAGE_INDEX);
     s_ibo->upload_wait<std::uint32_t>(indices);
 
     SDL_GPUColorTargetDescription color_target_desc {};
@@ -126,22 +138,80 @@ void experimental::shutdown(void)
     SDL_ReleaseGPUGraphicsPipeline(globals::gpu_device, s_pipeline);
 }
 
-void experimental::render(SDL_GPURenderPass* render_pass)
+void experimental::update(void)
 {
-    assert(render_pass);
+    s_phase += globals::client_frametime;
+
+    auto freq = s_phase * 2.0f * float(M_PI);
+    auto sval = std::sinf(freq);
+    auto cval = std::cosf(freq);
+
+    auto freq1 = 2.0f * s_phase * 2.0f * float(M_PI);
+    auto sval1 = std::sinf(freq1) / 128.0f;
+    auto cval1 = std::cosf(freq1) / 128.0f;
+
+    s_camera.set_projection_perspective(float(M_PI_2), video::aspect, 0.01f, 200.0f);
+    s_camera.set_look(Eigen::Vector3f(sval, 1.0f, cval), Eigen::Vector3f::Zero());
+    s_camera.update();
+
+    s_vertices[0].position += Eigen::Vector3f::Constant(sval1);
+    s_vertices[1].position += Eigen::Vector3f::Constant(cval1);
+    s_vertices[2].position += Eigen::Vector3f::Constant(sval1);
+    s_vertices[3].position += Eigen::Vector3f::Constant(cval1);
+}
+
+void experimental::update_late(void)
+{
+    s_vbo->update_late();
+}
+
+void experimental::render(SDL_GPUCommandBuffer* command_buffer)
+{
+    assert(command_buffer);
+
+    // Copy pass
+
+    auto copy_pass = SDL_BeginGPUCopyPass(command_buffer);
+    qf::throw_if_not<std::runtime_error>(copy_pass, "SDL_BeginGPUCopyPass returned nullptr");
+
+    auto current_vbo = s_vbo->upload<Vertex>(copy_pass, s_vertices);
+
+    SDL_EndGPUCopyPass(copy_pass);
+
+    // Render pass
+
+    SDL_GPUColorTargetInfo target_info {};
+    target_info.texture = globals::gpu_swapchain;
+    target_info.cycle = true;
+    target_info.load_op = SDL_GPU_LOADOP_CLEAR;
+    target_info.store_op = SDL_GPU_STOREOP_STORE;
+    target_info.clear_color.r = 0.0f;
+    target_info.clear_color.g = 0.0f;
+    target_info.clear_color.b = 0.1f;
+    target_info.clear_color.a = 0.0f;
+
+    auto render_pass = SDL_BeginGPURenderPass(command_buffer, &target_info, 1, nullptr);
+    qf::throw_if_not<std::runtime_error>(render_pass, "SDL_BeginGPURenderPass returned nullptr");
 
     SDL_BindGPUGraphicsPipeline(render_pass, s_pipeline);
 
     SDL_GPUBufferBinding vbo_binding {};
-    vbo_binding.buffer = s_vbo->handle();
+    vbo_binding.buffer = current_vbo;
     vbo_binding.offset = 0;
 
     SDL_GPUBufferBinding ibo_binding {};
     ibo_binding.buffer = s_ibo->handle();
     ibo_binding.offset = 0;
 
+    Uniforms uniforms;
+    uniforms.mvp = s_camera.view_projection();
+
     SDL_BindGPUVertexBuffers(render_pass, 0, &vbo_binding, 1);
     SDL_BindGPUIndexBuffer(render_pass, &ibo_binding, SDL_GPU_INDEXELEMENTSIZE_32BIT);
 
+    SDL_PushGPUVertexUniformData(command_buffer, 0, &uniforms, sizeof(uniforms));
+
     SDL_DrawGPUIndexedPrimitives(render_pass, 6, 1, 0, 0, 0);
+
+    SDL_EndGPURenderPass(render_pass);
 }

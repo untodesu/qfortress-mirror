@@ -9,7 +9,6 @@
 #include "client_modern/globals.hh"
 
 static SDL_GPUCommandBuffer* s_command_buffer;
-static SDL_GPURenderPass* s_render_pass;
 
 void render::init(void)
 {
@@ -41,12 +40,12 @@ void render::shutdown(void)
 
 void render::update(void)
 {
-    // empty
+    experimental::update();
 }
 
 void render::update_late(void)
 {
-    // empty
+    experimental::update_late();
 }
 
 void render::begin_frame(void)
@@ -61,30 +60,16 @@ void render::begin_frame(void)
         &swapchain_width, &swapchain_height);
     qf::throw_if_not_fmt<std::runtime_error>(swapchain_acquired, "failed to acquire a GPU swapchain texture: {}", SDL_GetError());
     qf::throw_if_not_fmt<std::runtime_error>(globals::gpu_swapchain, "SDL_WaitAndAcquireGPUSwapchainTexture returned nullptr");
-
-    SDL_GPUColorTargetInfo target_info {};
-    target_info.texture = globals::gpu_swapchain;
-    target_info.cycle = true;
-    target_info.load_op = SDL_GPU_LOADOP_CLEAR;
-    target_info.store_op = SDL_GPU_STOREOP_STORE;
-    target_info.clear_color.r = 0.0f;
-    target_info.clear_color.g = 0.0f;
-    target_info.clear_color.b = 0.1f;
-    target_info.clear_color.a = 0.0f;
-
-    s_render_pass = SDL_BeginGPURenderPass(s_command_buffer, &target_info, 1, nullptr);
-    qf::throw_if_not<std::runtime_error>(s_render_pass, "SDL_BeginGPURenderPass returned nullptr");
 }
 
 void render::end_frame(void)
 {
-    SDL_EndGPURenderPass(s_render_pass);
     SDL_SubmitGPUCommandBuffer(s_command_buffer);
 }
 
 void render::render(void)
 {
-    experimental::render(s_render_pass);
+    experimental::render(s_command_buffer);
 }
 
 void render::layout(void)

@@ -8,11 +8,15 @@ struct VSOutput {
     float2 texcoord : TEXCOORD0;
 };
 
+cbuffer Uniforms : register(b0, space1) {
+    float4x4 u_mvp;
+};
+
 VSOutput main(VSInput input)
 {
     VSOutput output;
 
-    output.position = float4(input.position, 1.0f);
+    output.position = mul(u_mvp, float4(input.position, 1.0f));
     output.texcoord = input.texcoord;
 
     return output;

@@ -15,6 +15,13 @@ private:
 
 namespace video
 {
+extern int width;
+extern int height;
+extern float aspect;
+} // namespace video
+
+namespace video
+{
 void init(void);
 void init_late(void);
 void shutdown(void);
