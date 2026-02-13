@@ -4,6 +4,13 @@
 
 #include "game/shared/globals.hh"
 
+class ConfigMap;
+
+namespace globals
+{
+extern ConfigMap client_config;
+} // namespace globals
+
 namespace globals
 {
 extern SDL_Window* window;

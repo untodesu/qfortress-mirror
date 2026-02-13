@@ -33,6 +33,8 @@ add_library(core STATIC
     "${CMAKE_CURRENT_LIST_DIR}/exceptions.hh"
     "${CMAKE_CURRENT_LIST_DIR}/image.cc"
     "${CMAKE_CURRENT_LIST_DIR}/image.hh"
+    "${CMAKE_CURRENT_LIST_DIR}/paths.cc"
+    "${CMAKE_CURRENT_LIST_DIR}/paths.hh"
     "${CMAKE_CURRENT_LIST_DIR}/pch.hh"
     "${CMAKE_CURRENT_LIST_DIR}/resource.cc"
     "${CMAKE_CURRENT_LIST_DIR}/resource.hh"

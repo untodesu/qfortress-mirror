@@ -2,6 +2,7 @@
 
 #include "game/client/main.hh"
 
+#include "core/config/map.hh"
 #include "core/entity/current_leaf.hh"
 #include "core/entity/transform.hh"
 #include "core/exceptions.hh"
@@ -56,6 +57,31 @@ static void handle_events(void)
             case SDL_EVENT_MOUSE_WHEEL:
                 globals::dispatcher.trigger(static_cast<const SDL_MouseWheelEvent&>(event.wheel));
                 break;
+
+            case SDL_EVENT_WINDOW_MOVED:
+            case SDL_EVENT_WINDOW_RESIZED:
+            case SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED:
+            case SDL_EVENT_WINDOW_METAL_VIEW_RESIZED:
+            case SDL_EVENT_WINDOW_MINIMIZED:
+            case SDL_EVENT_WINDOW_MAXIMIZED:
+            case SDL_EVENT_WINDOW_RESTORED:
+            case SDL_EVENT_WINDOW_MOUSE_ENTER:
+            case SDL_EVENT_WINDOW_MOUSE_LEAVE:
+            case SDL_EVENT_WINDOW_FOCUS_GAINED:
+            case SDL_EVENT_WINDOW_FOCUS_LOST:
+            case SDL_EVENT_WINDOW_CLOSE_REQUESTED:
+            case SDL_EVENT_WINDOW_HIT_TEST:
+            case SDL_EVENT_WINDOW_ICCPROF_CHANGED:
+            case SDL_EVENT_WINDOW_DISPLAY_CHANGED:
+            case SDL_EVENT_WINDOW_DISPLAY_SCALE_CHANGED:
+            case SDL_EVENT_WINDOW_SAFE_AREA_CHANGED:
+            case SDL_EVENT_WINDOW_OCCLUDED:
+            case SDL_EVENT_WINDOW_ENTER_FULLSCREEN:
+            case SDL_EVENT_WINDOW_LEAVE_FULLSCREEN:
+            case SDL_EVENT_WINDOW_DESTROYED:
+            case SDL_EVENT_WINDOW_HDR_STATE_CHANGED:
+                globals::dispatcher.trigger(static_cast<const SDL_WindowEvent&>(event.window));
+                break;
         }
 
         globals::dispatcher.trigger(static_cast<const SDL_Event&>(event));
@@ -76,6 +102,9 @@ void client::main(void)
     render_backend::init();
     render_frontend::init();
     client_game::init();
+
+    globals::client_config.load("client.conf");
+    globals::client_config.load("client.user.conf");
 
     video::init_late();
     render_backend::init_late();
@@ -157,6 +186,8 @@ void client::main(void)
 
     render_backend::shutdown();
     video::shutdown();
+
+    globals::client_config.save("client.conf");
 }
 
 void client::error(const std::exception* ex)

@@ -36,17 +36,17 @@ add_subdirectory(core)
 add_subdirectory(game/client)
 add_subdirectory(game/server)
 add_subdirectory(game/shared)
+add_subdirectory(game/launch)
 
 ## Add rendering implementations
 add_subdirectory(render/compat)
 add_subdirectory(render/modern)
 
 ## Game launcher
-add_subdirectory(main)
 
 ## Game development tools
-add_subdirectory(tools/qfgeomp)
-add_subdirectory(tools/qflight)
+add_subdirectory(tools/geomp)
+add_subdirectory(tools/light)
 
 install(FILES "${PROJECT_SOURCE_DIR}/LICENSE" DESTINATION "doc/qfortress")
 
