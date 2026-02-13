@@ -1,5 +1,5 @@
-#ifndef CORE_ENTITY_COMPONENTS_HH
-#define CORE_ENTITY_COMPONENTS_HH
+#ifndef CORE_COMPONENTS_HH
+#define CORE_COMPONENTS_HH
 #pragma once
 
 class ReadBuffer;

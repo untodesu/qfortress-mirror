@@ -11,9 +11,6 @@ namespace bsp
 {
 class Tree final {
 public:
-    void deserialize(ReadBuffer& buffer);
-    void serialize(WriteBuffer& buffer) const;
-
     /// Traverses the binary tree front-to-back
     /// @param look The point from which we're traversing the tree
     /// @param nodes Output nodes vector, will be cleared before traversal
@@ -28,6 +25,9 @@ public:
     /// @param point The point we're trying to classify
     /// @return Leaf node index or SIZE_MAX if tree is empty
     std::size_t locate(const Eigen::Vector3f& point) const noexcept;
+
+    constexpr const std::vector<Eigen::Hyperplane<float, 3>>& planes(void) const noexcept;
+    void set_planes(std::vector<Eigen::Hyperplane<float, 3>> planes) noexcept;
 
     constexpr const std::vector<std::string>& materials(void) const noexcept;
     void set_materials(std::vector<std::string> materials) noexcept;
@@ -54,10 +54,16 @@ private:
     /// @return Leaf node index
     std::size_t locate_internal(const Eigen::Vector3f& point, std::size_t index) const noexcept;
 
+    std::vector<Eigen::Hyperplane<float, 3>> m_planes;
     std::vector<std::string> m_materials;
     std::vector<bsp::Node> m_nodes;
 };
 } // namespace bsp
+
+constexpr const std::vector<Eigen::Hyperplane<float, 3>>& bsp::Tree::planes(void) const noexcept
+{
+    return m_planes;
+}
 
 constexpr const std::vector<std::string>& bsp::Tree::materials(void) const noexcept
 {

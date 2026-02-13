@@ -3,7 +3,7 @@
 #include "core/level/level.hh"
 
 #include "core/buffer.hh"
-#include "core/entity/components.hh"
+#include "core/components.hh"
 #include "core/exceptions.hh"
 #include "core/level/vertex.hh"
 #include "core/utils/physfs.hh"

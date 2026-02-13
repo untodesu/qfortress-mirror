@@ -2,7 +2,7 @@
 
 #include "core/entity/transform.hh"
 
-#include "core/entity/components.hh"
+#include "core/components.hh"
 
 static JSON_Value* serialize_transform(const entt::registry& registry, entt::entity entity)
 {

@@ -37,21 +37,23 @@ public:
 private:
     /// Recursive private implementation of traverse_ftb()
     /// @param nodes BSP nodes list
+    /// @param planes BSP planes list
     /// @param look The point from which we're traversing the tree
     /// @param index Node index to recurse into
     /// @param from_leaf Leaf in which look vector is
     /// @param out_nodes Output nodes vector
-    void traverse_internal_ftb(const std::vector<bsp::Node>& nodes, const Eigen::Vector3f& look, std::size_t index, std::size_t from_leaf,
-        std::vector<std::size_t>& out_nodes) const noexcept;
+    void traverse_internal_ftb(const std::vector<bsp::Node>& nodes, const std::vector<Eigen::Hyperplane<float, 3>>& planes,
+        const Eigen::Vector3f& look, std::size_t index, std::size_t from_leaf, std::vector<std::size_t>& out_nodes) const noexcept;
 
     /// Recursive private implementation of traverse_btf()
     /// @param nodes BSP nodes list
+    /// @param planes BSP planes list
     /// @param look The point from which we're traversing the tree
     /// @param index Node index to recurse into
     /// @param from_leaf Leaf in which look vector is
     /// @param out_nodes Output nodes vector
-    void traverse_internal_btf(const std::vector<bsp::Node>& nodes, const Eigen::Vector3f& look, std::size_t index, std::size_t from_leaf,
-        std::vector<std::size_t>& out_nodes) const noexcept;
+    void traverse_internal_btf(const std::vector<bsp::Node>& nodes, const std::vector<Eigen::Hyperplane<float, 3>>& planes,
+        const Eigen::Vector3f& look, std::size_t index, std::size_t from_leaf, std::vector<std::size_t>& out_nodes) const noexcept;
 
     std::vector<std::vector<std::uint32_t>> m_bitmap;
 };

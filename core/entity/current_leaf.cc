@@ -2,7 +2,7 @@
 
 #include "core/entity/current_leaf.hh"
 
-#include "core/entity/components.hh"
+#include "core/components.hh"
 #include "core/entity/transform.hh"
 #include "core/level/level.hh"
 

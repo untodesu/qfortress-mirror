@@ -5,14 +5,6 @@
 #include "core/buffer.hh"
 #include "core/exceptions.hh"
 
-void bsp::Tree::deserialize(ReadBuffer& buffer)
-{
-}
-
-void bsp::Tree::serialize(WriteBuffer& buffer) const
-{
-}
-
 void bsp::Tree::traverse_ftb(const Eigen::Vector3f& look, std::vector<std::size_t>& nodes) const noexcept
 {
     assert(look.allFinite());
@@ -38,6 +30,11 @@ std::size_t bsp::Tree::locate(const Eigen::Vector3f& point) const noexcept
     return locate_internal(point, 0);
 }
 
+void bsp::Tree::set_planes(std::vector<Eigen::Hyperplane<float, 3>> planes) noexcept
+{
+    m_planes = std::move(planes);
+}
+
 void bsp::Tree::set_materials(std::vector<std::string> materials) noexcept
 {
     m_materials = std::move(materials);
@@ -54,7 +51,8 @@ void bsp::Tree::traverse_internal_ftb(const Eigen::Vector3f& look, std::size_t i
         auto& node = m_nodes[index];
 
         if(auto chain = std::get_if<bsp::Chain>(&node)) {
-            auto distance = chain->hyperplane.signedDistance(look);
+            auto& hyperplane = m_planes[chain->plane_index];
+            auto distance = hyperplane.signedDistance(look);
 
             if(distance < 0.0f) {
                 traverse_internal_ftb(look, chain->back_index, nodes);
@@ -79,7 +77,8 @@ void bsp::Tree::traverse_internal_btf(const Eigen::Vector3f& look, std::size_t i
         auto& node = m_nodes[index];
 
         if(auto chain = std::get_if<bsp::Chain>(&node)) {
-            auto distance = chain->hyperplane.signedDistance(look);
+            auto& hyperplane = m_planes[chain->plane_index];
+            auto distance = hyperplane.signedDistance(look);
 
             if(distance < 0.0f) {
                 traverse_internal_btf(look, chain->front_index, nodes);
@@ -104,7 +103,8 @@ std::size_t bsp::Tree::locate_internal(const Eigen::Vector3f& point, std::size_t
         auto& node = m_nodes[index];
 
         if(auto chain = std::get_if<bsp::Chain>(&node)) {
-            auto distance = chain->hyperplane.signedDistance(point);
+            auto& hyperplane = m_planes[chain->plane_index];
+            auto distance = hyperplane.signedDistance(point);
 
             if(distance < 0.0f) {
                 return locate_internal(point, chain->back_index);

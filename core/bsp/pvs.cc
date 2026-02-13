@@ -27,7 +27,7 @@ void bsp::PVS::traverse_ftb(const bsp::Tree& tree, const Eigen::Vector3f& look, 
 
     nodes.clear();
 
-    traverse_internal_ftb(tree.nodes(), look, 0, tree.locate(look), nodes);
+    traverse_internal_ftb(tree.nodes(), tree.planes(), look, 0, tree.locate(look), nodes);
 }
 
 void bsp::PVS::traverse_btf(const bsp::Tree& tree, const Eigen::Vector3f& look, std::vector<std::size_t>& nodes) const noexcept
@@ -36,7 +36,7 @@ void bsp::PVS::traverse_btf(const bsp::Tree& tree, const Eigen::Vector3f& look, 
 
     nodes.clear();
 
-    traverse_internal_btf(tree.nodes(), look, 0, tree.locate(look), nodes);
+    traverse_internal_btf(tree.nodes(), tree.planes(), look, 0, tree.locate(look), nodes);
 }
 
 void bsp::PVS::set_bitmap(std::vector<std::vector<std::uint32_t>> bitmap) noexcept
@@ -44,24 +44,25 @@ void bsp::PVS::set_bitmap(std::vector<std::vector<std::uint32_t>> bitmap) noexce
     m_bitmap = std::move(bitmap);
 }
 
-void bsp::PVS::traverse_internal_ftb(const std::vector<bsp::Node>& nodes, const Eigen::Vector3f& look, std::size_t index,
-    std::size_t from_leaf, std::vector<std::size_t>& out_nodes) const noexcept
+void bsp::PVS::traverse_internal_ftb(const std::vector<bsp::Node>& nodes, const std::vector<Eigen::Hyperplane<float, 3>>& planes,
+    const Eigen::Vector3f& look, std::size_t index, std::size_t from_leaf, std::vector<std::size_t>& out_nodes) const noexcept
 {
     if(index < nodes.size()) {
         auto& node = nodes[index];
 
         if(auto chain = std::get_if<bsp::Chain>(&node)) {
-            auto distance = chain->hyperplane.signedDistance(look);
+            auto& hyperplane = planes[chain->plane_index];
+            auto distance = hyperplane.signedDistance(look);
 
             if(distance < 0.0f) {
-                traverse_internal_ftb(nodes, look, chain->back_index, from_leaf, out_nodes);
+                traverse_internal_ftb(nodes, planes, look, chain->back_index, from_leaf, out_nodes);
                 out_nodes.push_back(index);
-                traverse_internal_ftb(nodes, look, chain->front_index, from_leaf, out_nodes);
+                traverse_internal_ftb(nodes, planes, look, chain->front_index, from_leaf, out_nodes);
             }
             else {
-                traverse_internal_ftb(nodes, look, chain->front_index, from_leaf, out_nodes);
+                traverse_internal_ftb(nodes, planes, look, chain->front_index, from_leaf, out_nodes);
                 out_nodes.push_back(index);
-                traverse_internal_ftb(nodes, look, chain->back_index, from_leaf, out_nodes);
+                traverse_internal_ftb(nodes, planes, look, chain->back_index, from_leaf, out_nodes);
             }
         }
         else if(is_visible(from_leaf, index)) {
@@ -70,24 +71,25 @@ void bsp::PVS::traverse_internal_ftb(const std::vector<bsp::Node>& nodes, const 
     }
 }
 
-void bsp::PVS::traverse_internal_btf(const std::vector<bsp::Node>& nodes, const Eigen::Vector3f& look, std::size_t index,
-    std::size_t from_leaf, std::vector<std::size_t>& out_nodes) const noexcept
+void bsp::PVS::traverse_internal_btf(const std::vector<bsp::Node>& nodes, const std::vector<Eigen::Hyperplane<float, 3>>& planes,
+    const Eigen::Vector3f& look, std::size_t index, std::size_t from_leaf, std::vector<std::size_t>& out_nodes) const noexcept
 {
     if(index < nodes.size()) {
         auto& node = nodes[index];
 
         if(auto chain = std::get_if<bsp::Chain>(&node)) {
-            auto distance = chain->hyperplane.signedDistance(look);
+            auto& hyperplane = planes[chain->plane_index];
+            auto distance = hyperplane.signedDistance(look);
 
             if(distance < 0.0f) {
-                traverse_internal_btf(nodes, look, chain->front_index, from_leaf, out_nodes);
+                traverse_internal_btf(nodes, planes, look, chain->front_index, from_leaf, out_nodes);
                 out_nodes.push_back(index);
-                traverse_internal_btf(nodes, look, chain->back_index, from_leaf, out_nodes);
+                traverse_internal_btf(nodes, planes, look, chain->back_index, from_leaf, out_nodes);
             }
             else {
-                traverse_internal_btf(nodes, look, chain->back_index, from_leaf, out_nodes);
+                traverse_internal_btf(nodes, planes, look, chain->back_index, from_leaf, out_nodes);
                 out_nodes.push_back(index);
-                traverse_internal_btf(nodes, look, chain->front_index, from_leaf, out_nodes);
+                traverse_internal_btf(nodes, planes, look, chain->front_index, from_leaf, out_nodes);
             }
         }
         else if(is_visible(from_leaf, index)) {

@@ -1,6 +1,6 @@
 #include "core/pch.hh"
 
-#include "core/entity/components.hh"
+#include "core/components.hh"
 
 struct ComponentInfo final {
     std::string component_name;
