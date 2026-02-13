@@ -11,6 +11,10 @@ class Tree;
 
 namespace bsp
 {
+/// A quote-unquote "lump" for potentially visible set (PVS) data; contains
+/// precomputed visibility information for each leaf in the BSP tree; this
+/// allows us to quickly determine which parts of the level are potentially
+/// visible from a given leaf; more complicated culling is done via bsp::PVis
 class PVS final {
 public:
     /// Checks if a BSP leaf is potentially visible from an another leaf
@@ -19,49 +23,29 @@ public:
     /// @return True when target_leaf is potentially visible from from_leaf
     bool is_visible(std::size_t from_leaf, std::size_t target_leaf) const noexcept;
 
-    /// Traverse the binary tree front-to-back with respect to PVS
-    /// @param tree BSP tree to traverse
-    /// @param look The point from which we're traversing the tree
-    /// @param nodes Output nodes vector, will be cleared before traversal
-    void traverse_ftb(const bsp::Tree& tree, const Eigen::Vector3f& look, std::vector<std::size_t>& nodes) const noexcept;
+    /// Gets the set of potentially visible leaves from a given leaf
+    /// @param from_leaf Leaf index from which we're looking
+    /// @param out_leaves Output set of leaf indices, will be cleared before filling
+    /// @return True if from_leaf is valid and out_leaves was filled, false if from_leaf is out of bounds and out_leaves was cleared
+    bool get_visible_leaves(std::size_t from_leaf, std::unordered_set<std::uint32_t>& out_leaves) const noexcept;
 
-    /// Traverse the binary tree back-to-front with respect to PVS
-    /// @param tree BSP tree to traverse
-    /// @param look The point from which we're traversing the tree
-    /// @param nodes Output nodes vector, will be cleared before traversal
-    void traverse_btf(const bsp::Tree& tree, const Eigen::Vector3f& look, std::vector<std::size_t>& nodes) const noexcept;
+    /// Gets the vector of potentially visible leaves from a given leaf as a vector
+    /// @param from_leaf Leaf index from which we're looking
+    /// @param out_leaves Output vector of leaf indices, will be cleared before filling
+    /// @return True if from_leaf is valid and out_leaves was filled, false if from_leaf is out of bounds and out_leaves was cleared
+    bool get_visible_leaves(std::size_t from_leaf, std::vector<std::uint32_t>& out_leaves) const noexcept;
 
-    constexpr const std::vector<std::vector<std::uint32_t>>& bitmap(void) const noexcept;
-    void set_bitmap(std::vector<std::vector<std::uint32_t>> bitmap) noexcept;
+    constexpr const std::vector<std::unordered_set<std::uint32_t>>& visdata(void) const noexcept;
+    void set_visdata(std::vector<std::unordered_set<std::uint32_t>> visdata) noexcept;
 
 private:
-    /// Recursive private implementation of traverse_ftb()
-    /// @param nodes BSP nodes list
-    /// @param planes BSP planes list
-    /// @param look The point from which we're traversing the tree
-    /// @param index Node index to recurse into
-    /// @param from_leaf Leaf in which look vector is
-    /// @param out_nodes Output nodes vector
-    void traverse_internal_ftb(const std::vector<bsp::Node>& nodes, const std::vector<Eigen::Hyperplane<float, 3>>& planes,
-        const Eigen::Vector3f& look, std::size_t index, std::size_t from_leaf, std::vector<std::size_t>& out_nodes) const noexcept;
-
-    /// Recursive private implementation of traverse_btf()
-    /// @param nodes BSP nodes list
-    /// @param planes BSP planes list
-    /// @param look The point from which we're traversing the tree
-    /// @param index Node index to recurse into
-    /// @param from_leaf Leaf in which look vector is
-    /// @param out_nodes Output nodes vector
-    void traverse_internal_btf(const std::vector<bsp::Node>& nodes, const std::vector<Eigen::Hyperplane<float, 3>>& planes,
-        const Eigen::Vector3f& look, std::size_t index, std::size_t from_leaf, std::vector<std::size_t>& out_nodes) const noexcept;
-
-    std::vector<std::vector<std::uint32_t>> m_bitmap;
+    std::vector<std::unordered_set<std::uint32_t>> m_visdata;
 };
 } // namespace bsp
 
-constexpr const std::vector<std::vector<std::uint32_t>>& bsp::PVS::bitmap(void) const noexcept
+constexpr const std::vector<std::unordered_set<std::uint32_t>>& bsp::PVS::visdata(void) const noexcept
 {
-    return m_bitmap;
+    return m_visdata;
 }
 
 #endif

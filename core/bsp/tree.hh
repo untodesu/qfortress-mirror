@@ -9,6 +9,9 @@ class WriteBuffer;
 
 namespace bsp
 {
+/// A quote-unquote "lump" for the BSP tree structure; contains
+/// plane and node data; the tree is stored as a flat array of nodes
+/// with indices referencing child nodes; the root node is always at index 0
 class Tree final {
 public:
     /// Traverses the binary tree front-to-back
@@ -28,9 +31,6 @@ public:
 
     constexpr const std::vector<Eigen::Hyperplane<float, 3>>& planes(void) const noexcept;
     void set_planes(std::vector<Eigen::Hyperplane<float, 3>> planes) noexcept;
-
-    constexpr const std::vector<std::string>& materials(void) const noexcept;
-    void set_materials(std::vector<std::string> materials) noexcept;
 
     constexpr const std::vector<bsp::Node>& nodes(void) const noexcept;
     void set_nodes(std::vector<bsp::Node> nodes) noexcept;
@@ -55,7 +55,6 @@ private:
     std::size_t locate_internal(const Eigen::Vector3f& point, std::size_t index) const noexcept;
 
     std::vector<Eigen::Hyperplane<float, 3>> m_planes;
-    std::vector<std::string> m_materials;
     std::vector<bsp::Node> m_nodes;
 };
 } // namespace bsp
@@ -63,11 +62,6 @@ private:
 constexpr const std::vector<Eigen::Hyperplane<float, 3>>& bsp::Tree::planes(void) const noexcept
 {
     return m_planes;
-}
-
-constexpr const std::vector<std::string>& bsp::Tree::materials(void) const noexcept
-{
-    return m_materials;
 }
 
 constexpr const std::vector<bsp::Node>& bsp::Tree::nodes(void) const noexcept

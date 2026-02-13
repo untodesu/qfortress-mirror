@@ -1,7 +1,10 @@
 add_library(core STATIC
-    "${CMAKE_CURRENT_LIST_DIR}/bsp/node.hh"
     "${CMAKE_CURRENT_LIST_DIR}/bsp/mesh.cc"
     "${CMAKE_CURRENT_LIST_DIR}/bsp/mesh.hh"
+    "${CMAKE_CURRENT_LIST_DIR}/bsp/node.hh"
+    "${CMAKE_CURRENT_LIST_DIR}/bsp/portal.hh"
+    "${CMAKE_CURRENT_LIST_DIR}/bsp/pvis.cc"
+    "${CMAKE_CURRENT_LIST_DIR}/bsp/pvis.hh"
     "${CMAKE_CURRENT_LIST_DIR}/bsp/pvs.cc"
     "${CMAKE_CURRENT_LIST_DIR}/bsp/pvs.hh"
     "${CMAKE_CURRENT_LIST_DIR}/bsp/tree.cc"

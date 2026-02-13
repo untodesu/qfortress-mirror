@@ -35,11 +35,6 @@ void bsp::Tree::set_planes(std::vector<Eigen::Hyperplane<float, 3>> planes) noex
     m_planes = std::move(planes);
 }
 
-void bsp::Tree::set_materials(std::vector<std::string> materials) noexcept
-{
-    m_materials = std::move(materials);
-}
-
 void bsp::Tree::set_nodes(std::vector<bsp::Node> nodes) noexcept
 {
     m_nodes = std::move(nodes);

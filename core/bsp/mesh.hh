@@ -16,6 +16,10 @@ struct Vertex final {
 
 namespace bsp
 {
+/// A quote-unquote "lump" for level geometry; contains
+/// vertex and index data that is ready to be uploaded to
+/// the GPU as-is without any further processing; index buffer
+/// data is referenced by bsp::Leaf idx_buffer_offset and idx_buffer_count fields
 class Mesh final {
 public:
     constexpr const std::vector<bsp::Vertex>& vertices(void) const noexcept;
